@@ -1,5 +1,5 @@
+#!/usr/bin/python
 #!/usr/local/bin/python3
-##!/usr/bin/python
 ### -*- coding: utf-8 -*-
 
 import pygame
@@ -15,7 +15,7 @@ from random import randint
 #print wifi_stat['stats']['level']
 
 
-#os.environ["SDL_FBDEV"] = "/dev/fb1"
+os.environ["SDL_FBDEV"] = "/dev/fb1"
 
 pygame.font.init()
 
@@ -23,7 +23,9 @@ mpd.init()
 
 start_time = datetime.now() # remember time when script was started
 
-SCREEN_SIZE = (160,128)
+displayx = 160
+displayy = 128
+SCREEN_SIZE = (displayx,displayy)
 
 screen = pygame.display.set_mode(SCREEN_SIZE)
 pygame.init()
@@ -35,14 +37,14 @@ light_gray = (200,200,200)
 dark_gray  = (150,150,150)
 red        = (255,0,0)
 
-small_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", 14)
-small_font_bold = pygame.font.Font("fonts/NotoSans-Bold.ttf", 14)
-medium_font     = pygame.font.Font("fonts/NotoSans-Regular.ttf", 18)
-large_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", 24)
-bold_font       = pygame.font.Font("fonts/NotoSans-Bold.ttf", 18)
-icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", 16)
-icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", 16)
-icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", 56)
+small_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(displayy/9.14))
+small_font_bold = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(displayy/9.14))
+medium_font     = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(displayy/7.11))
+large_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(displayy/5.33))
+bold_font       = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(displayy/7.11))
+icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(displayy/8))
+icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(displayy/8))
+icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(displayy/2.28))
 
 wifi_icon_high = icon_font_small.render(u'\uf2e8',True,black)
 wifi_icon_medium = icon_font_small.render(u'\uf2e2',True,black)
@@ -124,37 +126,38 @@ while True:
     time_str=time.strftime("%H:%M")
     time_text = small_font_bold.render(time_str, True, black)
     #screen.blit(wifi_icon_high,(125,30))
+    statusbar_pos = int(displayy/4.27)
     if wifi > 66:
-        screen.blit(wifi_icon_high,(125,30))
+        screen.blit(wifi_icon_high,(int(displayx/1.3),statusbar_pos))
     elif wifi > 33:
-        screen.blit(wifi_icon_medium,(125,30))
+        screen.blit(wifi_icon_medium,(int(displayx/1.3),statusbar_pos))
     elif wifi <= 33:
-        screen.blit(wifi_icon_low,(125,30))
+        screen.blit(wifi_icon_low,(int(displayx/1.3),statusbar_pos))
 
     if wifi == 0:
-        screen.blit(vol_icon_off,(20,30))
+        screen.blit(vol_icon_off,(int(displayx/8),statusbar_pos))
     elif wifi > 66:
-        screen.blit(vol_icon_high,(20,30))
+        screen.blit(vol_icon_high,(int(displayx/8),statusbar_pos))
     elif vol > 33:
-        screen.blit(vol_icon_medium,(20,30))
+        screen.blit(vol_icon_medium,(int(displayx/8),statusbar_pos))
     elif vol <= 33:
-        screen.blit(vol_icon_low,(20,30))
+        screen.blit(vol_icon_low,(int(displayx/8),statusbar_pos))
     print_bar(vol)
 
     wifi_text = small_font.render(str(wifi), True, black)
-    screen.blit(wifi_text,(142,30))
+    screen.blit(wifi_text,(int(displayx/1.13),statusbar_pos))
     vol_text = small_font.render(str(vol), True, black)
-    screen.blit(vol_text,(1,30))
-    screen.blit(time_text,(65,30))
+    screen.blit(vol_text,(1,statusbar_pos))
+    screen.blit(time_text,(int(displayx/2.46),statusbar_pos))
     #screen.blit(speaker_icon,(10,30))
     if mpd.stat() == "play":
-        screen.blit(play_icon,(40,30))
-        blit_it(name,medium_font,50,1,1)
-        blit_it(artist,medium_font,70,0,1)
-        blit_it(title,bold_font,90,2,2)
+        screen.blit(play_icon,(int(displayx/4),statusbar_pos))
+        blit_it(name,medium_font,int(displayy/2.67),1,1)
+        blit_it(artist,medium_font,int(displayy/1.94),0,1)
+        blit_it(title,bold_font,int(displayy/1.52),2,2)
     else:
-        screen.blit(pause_icon,(40,30))
-        screen.blit(radio_icon,(55,45))
+        screen.blit(pause_icon,(int(displayx/4),statusbar_pos))
+        screen.blit(radio_icon,(int(displayx/2.91),int(displayy/2.84)))
         #blit_it(name,medium_font,50,1,1)
 
     pygame.display.update()
