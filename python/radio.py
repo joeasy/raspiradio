@@ -88,14 +88,18 @@ def blit_it(raw_text,font,y_pos,index,speed):
         line_scroll_pos[index] = x_pos
     else:
         text = font.render(raw_text, True, black)
-        x_pos = (SCREEN_SIZE[0] - text.get_width()) // 2
+        x_pos = (SCREEN_SIZE[0] - text.get_width()) // 2 
         screen.blit(text,(x_pos,y_pos))
 
 def print_bar(value):
-    bar_width = (value * 140)//100
-    pygame.draw.rect(screen, black, (8, 108, 144, 14))
-    pygame.draw.rect(screen, light_gray, (10, 110, 140, 10))
-    pygame.draw.rect(screen, dark_gray, (10, 110, bar_width, 10))
+    bar_width = int(value * displayx/1.14/100)
+    x_start = int(displayx/16)
+    y_start = int(displayy/1.16)
+    x_width = int(displayx/1.14)
+    y_width = int(displayy/12.8)
+    pygame.draw.rect(screen, black, (x_start - 2, y_start - 2, x_width + 4, y_width + 4))
+    pygame.draw.rect(screen, light_gray, (x_start, y_start, x_width, y_width))
+    pygame.draw.rect(screen, dark_gray, (x_start, y_start, bar_width, y_width))
 
 name   = ""
 artist = ""
@@ -147,7 +151,7 @@ while True:
     wifi_text = small_font.render(str(wifi), True, black)
     screen.blit(wifi_text,(int(displayx/1.13),statusbar_pos))
     vol_text = small_font.render(str(vol), True, black)
-    screen.blit(vol_text,(1,statusbar_pos))
+    screen.blit(vol_text,(int(displayx/160),statusbar_pos))
     screen.blit(time_text,(int(displayx/2.46),statusbar_pos))
     #screen.blit(speaker_icon,(10,30))
     if mpd.stat() == "play":
