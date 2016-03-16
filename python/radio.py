@@ -178,7 +178,7 @@ while True:
             last_radio_update = now
         screen.blit(play_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         scroll_pos.name   = scroll_text(disp_elements.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
-        scroll_pos.artist = scroll_text(disp_elements.artist,medium_font,disp_positions.artist_y,scroll_pos.title,1)
+        scroll_pos.artist = scroll_text(disp_elements.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
         scroll_pos.title  = scroll_text(disp_elements.title,bold_font,disp_positions.title_y,scroll_pos.title,1)
     else:
         screen.blit(pause_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
