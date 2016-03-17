@@ -17,4 +17,3 @@ Useful links
 - http://sainsmart.tumblr.com/post/52849596106/diagramsainsmart-18-tft-lcd-modules-connect
 - https://rhobobase.wordpress.com/2015/05/01/mini-screen/
 - https://github.com/notro/fbtft/wiki
-- 
