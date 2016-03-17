@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 #!/usr/bin/env python
 
 import pygame
@@ -8,35 +9,44 @@ from lib import libmpdfunctions as mpd
 from datetime import datetime
 from random import randint
 import re
-import iwlib
-
-os.environ["SDL_FBDEV"] = "/dev/fb1"
 
 pygame.font.init()
 mpd.init()
 
 start_time = datetime.now() # remember time when script was started
 
-# get screen dimensions
-with open('/sys/class/graphics/fb1/virtual_size') as file:
-    lines = file.readlines()
-lines[0] = lines[0].strip()
-parts = re.split(',', lines[0])
 
-size_x = int(parts[0])
-size_y = int(parts[1])
+# get screen dimensions
+if os.path.exists("/sys/class/graphics/fb1/virtual_size"):
+    with open('/sys/class/graphics/fb1/virtual_size') as file:
+        lines = file.readlines()
+    lines[0] = lines[0].strip()
+    parts = re.split(',', lines[0])
+    size_x = int(parts[0])
+    size_y = int(parts[1])
+    print("found screen: " + size_x + "x" + size_y)
+    os.environ["SDL_FBDEV"] = "/dev/fb1"
+    import iwlib
+    test_mode = False
+
+else:
+    print("running in test mode ...")
+    size_x = 320
+    size_y = 240
+    test_mode = True
 
 screen = pygame.display.set_mode((size_x,size_y))
 pygame.init()
 pygame.mouse.set_visible(False)
 
-last_mpd_update  = 0
-last_wifi_update = 0
-last_vol_update  = 0
-
 wifi_update_intervall = 1000
 mpd_update_intervall  = 1000
 vol_update_intervall  = 2000
+
+class last_update:
+    wifi = 0
+    mpd  = 0
+    vol  = 0
 
 # define colors
 white      = (255,255,255)
@@ -94,6 +104,7 @@ class disp_positions:
     radio_icon_x  = int(size_x/2.91)
     radio_icon_y  = int(size_y/2.84)
 
+# get milliseconds since program start
 def millis():
    dt = datetime.now() - start_time
    ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
@@ -129,18 +140,17 @@ def print_bar(value):
 
 # get current wifi signal level
 def get_wifi():
+    if test_mode:
+        disp_elements.wifi = randint(0,100)
+        return
     wifi_stat = iwlib.iwconfig.get_iwconfig("wlan0")
     disp_elements.wifi = str(wifi_stat['stats']['level'])
 
-# main loop
-while True:
-    now = millis()
-    screen.fill(white)
-
-    # wifi signal display
-    if (now - last_wifi_update > wifi_update_intervall):    # update radio data
+# wifi signal display
+def show_wifi(timestamp):
+    if (timestamp - last_update.wifi > wifi_update_intervall):    # update radio data
         get_wifi()
-        last_wifi_update = now
+        last_update.wifi = timestamp
     if disp_elements.wifi > 66:
         screen.blit(wifi_icon_high,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
     elif disp_elements.wifi > 33:
@@ -152,10 +162,11 @@ while True:
     wifi_text = small_font.render(str(disp_elements.wifi), True, black)
     screen.blit(wifi_text,(disp_positions.wifi_text_x,disp_positions.statusbar_pos))
 
-    # volume icon and bar
-    if (now - last_vol_update > vol_update_intervall):    # update radio data
+# volume icon and bar
+def show_vol(timestamp):
+    if (timestamp - last_update.vol > vol_update_intervall):    # update radio data
         disp_elements.vol = randint(0,100)
-        last_vol_update = now
+        last_update.vol = timestamp
     if disp_elements.vol == 0:
         screen.blit(vol_icon_off,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     elif disp_elements.vol > 66:
@@ -166,16 +177,18 @@ while True:
         screen.blit(vol_icon_low,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     print_bar(disp_elements.vol)
 
-    # time display update
+# time display update
+def show_time():
     time_str=time.strftime("%H:%M")
     time_text = small_font_bold.render(time_str, True, black)
     screen.blit(time_text,(disp_positions.time_text_x,disp_positions.statusbar_pos))
 
-    # mpd infos
+# mpd infos
+def show_mpd(timestamp):
     if mpd.stat() == "play":
-        if (now - last_mpd_update > mpd_update_intervall):    # update radio data
+        if (timestamp - last_update.mpd > mpd_update_intervall):    # update radio data
             (disp_elements.name, disp_elements.artist, disp_elements.title) = mpd.info()
-            last_radio_update = now
+            last_update.mpd = timestamp
         screen.blit(play_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         scroll_pos.name   = scroll_text(disp_elements.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
         scroll_pos.artist = scroll_text(disp_elements.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
@@ -183,6 +196,16 @@ while True:
     else:
         screen.blit(pause_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         screen.blit(radio_icon,(disp_positions.radio_icon_x,disp_positions.radio_icon_y))
+
+# main loop
+while True:
+    now = millis()
+    screen.fill(white)
+
+    show_wifi(now)
+    show_vol(now)
+    show_time()
+    show_mpd(now)
 
     pygame.display.update()
     time.sleep(0.05)
