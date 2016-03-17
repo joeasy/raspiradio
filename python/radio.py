@@ -179,10 +179,10 @@ while True:
         screen.blit(play_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         scroll_pos.name   = scroll_text(disp_elements.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
         scroll_pos.artist = scroll_text(disp_elements.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
-        scroll_pos.title  = scroll_text(disp_elements.title,bold_font,disp_positions.title_y,scroll_pos.title,1)
+        scroll_pos.title  = scroll_text(disp_elements.title,bold_font,disp_positions.title_y,scroll_pos.title,2)
     else:
         screen.blit(pause_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         screen.blit(radio_icon,(disp_positions.radio_icon_x,disp_positions.radio_icon_y))
 
     pygame.display.update()
-    time.sleep(0.05)
+    time.sleep(0.02)
