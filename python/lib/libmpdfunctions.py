@@ -19,9 +19,9 @@ def init(host="localhost", port=6600, playlist="radio", columns=200):
     mpd_client.timeout = 20
     mpd_client.idletimeout = None
     mpd_client.connect(mpd_host, mpd_port)
-    #mpd_client.clear()
-    #mpd_client.load(playlist)
-    #mpd_client.play(0)
+    mpd_client.clear()
+    mpd_client.load(playlist)
+    mpd_client.play(0)
     mpd_client.disconnect()
 
 #---------------------------------------------------------------------#

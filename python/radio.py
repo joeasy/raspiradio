@@ -90,7 +90,7 @@ class tone_mode:
 
 tones        = [100,100,40,100,0]                     # bass, mid, treble, volume
 prev_tones   = [0,0,0,0,0]                            # the last values
-tone_strings = ["Volume", "Bass", "Middle", "Treble"] # Stings in the display fore tones
+tone_strings = ["Vol", "Bass", "Mid", "Treb"] # Stings in the display fore tones
 
 num_sources     = 1 # number of input sources
 num_tone_modes           = 3    # number of tone adjustment modes
@@ -103,7 +103,6 @@ class sources:
 source_strings = ["RAD", "AIR"]
 
 class states:
-    Even              = True
     current_channel   = 0
     current_tone_mode = tone_mode.volume
     current_source    = sources.IRadio
@@ -168,20 +167,21 @@ class scroll_pos:
     title  = 0
 
 class disp_positions:
-    statusbar_pos = int(size_y/4.27)
-    wifi_icon_x   = int(size_x/1.3)
-    wifi_text_x   = int(size_x/1.13)
-    vol_icon_x    = int(size_x/40)
-    time_text_x   = int(size_x/2.46)
-    play_icon_x   = int(size_x/8)
-    name_y        = int(size_y/2.67)
-    artist_y      = int(size_y/1.94)
-    title_y       = int(size_y/1.52)
-    radio_icon_x  = int(size_x/2.91)
-    tone_icon_x   = int(size_x/5)
-    big_icon_y    = int(size_y/2.84)
-    tone_text_x   = int(size_x/2.3)
-    tone_text_y   = int(size_y/2.3)
+    statusbar_pos       = int(size_y/4.27)
+    wifi_icon_x         = int(size_x/1.3)
+    wifi_text_x         = int(size_x/1.13)
+    vol_icon_x          = int(size_x/40)
+    time_text_x         = int(size_x/2.46)
+    play_icon_x         = int(size_x/8)
+    name_y              = int(size_y/2.67)
+    artist_y            = int(size_y/1.94)
+    title_y             = int(size_y/1.52)
+    radio_icon_x        = int(size_x/2.91)
+    tone_icon_x         = int(size_x/5)
+    big_icon_y          = int(size_y/2.84)
+    tone_text_x         = int(size_x/2.3)
+    tone_text_y         = int(size_y/2.3)
+    current_tone_text_x = int(size_x/5)
 
 #-----------------------------------------------------------------#
 #  is like arduino map function                                   #
@@ -262,9 +262,11 @@ def show_vol(timestamp):
         screen.blit(vol_icon_high,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     elif vol_value > 33:
         screen.blit(vol_icon_medium,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif vol_value.vol <= 33:
+    elif vol_value <= 33:
         screen.blit(vol_icon_low,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     print_bar(tones[states.current_tone_mode])
+    current_tone_text = small_font.render(tone_strings[states.current_tone_mode], True, black)
+    screen.blit(current_tone_text,(disp_positions.current_tone_text_x,disp_positions.statusbar_pos))
 
 # time display update
 def show_time():
@@ -274,13 +276,10 @@ def show_time():
 # mpd infos
 def show_mpd(timestamp):
     if mpd.stat() == "play":
-        if (timestamp - last_update.radio > update_intervall.radio):    # update radio data
-            (disp_elements.name, disp_elements.artist, disp_elements.title) = mpd.info()
-            last_update.radio = timestamp
         screen.blit(play_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
-        scroll_pos.name   = scroll_text(disp_elements.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
-        scroll_pos.artist = scroll_text(disp_elements.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
-        scroll_pos.title  = scroll_text(disp_elements.title,bold_font,disp_positions.title_y,scroll_pos.title,1)
+        scroll_pos.name   = scroll_text(disp_content.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
+        scroll_pos.artist = scroll_text(disp_content.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
+        scroll_pos.title  = scroll_text(disp_content.title,bold_font,disp_positions.title_y,scroll_pos.title,1)
     else:
         screen.blit(pause_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         screen.blit(radio_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
@@ -294,7 +293,7 @@ def switch_channel(ir_value):
             states.current_channel = states.current_channel + 1
         else:
             states.current_channel = 0
-        mpd.play(current_channel)
+        mpd.play(states.current_channel)
     if ir_value == "KEY_DOWN":
         if states.current_channel != 0:
             states.current_channel = current_channel - 1
@@ -315,15 +314,12 @@ def switch_source():
 #     switch application mode - is triggert by push button        #
 #-----------------------------------------------------------------#
 def switch_tone(message):
-    global current_tone_mode
-    global mode_changed
-    global last_tone_adjusted
     last_tone_adjusted = millis()
-    if (millis() - last_tone_switch > tone_switch_intervall):
-        mode_changed = True
-        current_tone_mode = current_tone_mode + 1
-        if (current_tone_mode > num_tone_modes):
-            current_tone_mode = 0
+    if (millis() - last_update.tone_switch > update_intervall.tone_switch):
+        states.mode_changed = True
+        states.current_tone_mode = states.current_tone_mode + 1
+        if (states.current_tone_mode > num_tone_modes):
+            states.current_tone_mode = 0
 
 #-----------------------------------------------------------------#
 #  update tones if they were changed and save the state to file   #
@@ -360,11 +356,18 @@ def update_tones():
 def tone_adjust(ir_value):
     global tones
     value = readIR(0, 100, tones[states.current_tone_mode], ir_value)
+    #value = readEncoder(0, 100, tones[states.current_tone_mode])
     if (value != tones[states.current_tone_mode]):
         tones[states.current_tone_mode] = value
         if (states.current_tone_mode != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
     value = readEncoder(0, 100, tones[states.current_tone_mode])
+    if (value != tones[states.current_tone_mode]):
+        tones[states.current_tone_mode] = value
+        if (states.current_tone_mode != tone_mode.volume):
+            last_update.tone_adjust_idle = millis()
+
+    #value = readEncoder(0, 100, tones[states.current_tone_mode])
 
 #-----------------------------------------------------------------#
 #                       read encoder                              #
@@ -449,15 +452,8 @@ def loop():
     if ir_value == "KEY_OK":    # switch tone mode
         switch_tone(True)
 
-    date_string = ""
     if (now - last_update.time > update_intervall.time):       # update time in diaplay
-        if states.Even:
-            date_string=time.strftime("%H:%M")
-            states.Even = False
-        else:
-            date_string=time.strftime("%H %M")
-            states.Even = True
-        disp_content.time = date_string
+        disp_content.time = time.strftime("%H:%M")
         last_update.time = now
 
     if (now - last_update.tone > update_intervall.tone ): # update tones
