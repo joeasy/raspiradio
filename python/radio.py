@@ -32,7 +32,7 @@ GPIO.setmode(GPIO.BOARD)    # RPi.GPIO Layout like pin Numbers on raspi
 encoder = gaugette.rotary_encoder.RotaryEncoder.Worker(A_PIN, B_PIN)
 encoder.start()
 
-sockid=lirc.init("appleremote", blocking = False)  # connect ti linux lircd
+sockid=lirc.init("appleremote", blocking=False)  # connect ti linux lircd
 
 
 # get screen dimensions
@@ -296,7 +296,7 @@ def switch_channel(ir_value):
         mpd.play(states.current_channel)
     if ir_value == "KEY_DOWN":
         if states.current_channel != 0:
-            states.current_channel = current_channel - 1
+            states.current_channel = states.current_channel - 1
         else:
             states.current_channel = num_radio_channels
         mpd.play(states.current_channel)
