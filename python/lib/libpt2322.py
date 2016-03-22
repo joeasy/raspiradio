@@ -92,6 +92,7 @@ def HEX2BCD(x):
 
 # helper method
 def writeI2CChar(b):
+    #time.sleep(0.1)
     print "data: %x" % b
     try:
         i2c.write_byte(i2c_address, b)  # send data via i2c

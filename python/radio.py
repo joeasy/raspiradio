@@ -12,8 +12,10 @@ from   datetime import datetime
 from   random import randint
 import re
 import json
-import lirc
 import iwlib
+from evdev import InputDevice, categorize, ecodes, list_devices
+import thread
+from select import select
 
 mpd.init()
 audio.init()
@@ -28,13 +30,13 @@ GPIO.setmode(GPIO.BOARD)    # RPi.GPIO Layout like pin Numbers on raspi
 
 #display.ini() # init the display
 
-exit
+lirc_device = InputDevice('/dev/input/event0')
+print(lirc_device)
+lirc_code = None
 
 # define rotary encoder and start background thread
 encoder = gaugette.rotary_encoder.RotaryEncoder.Worker(A_PIN, B_PIN)
 encoder.start()
-
-sockid=lirc.init("appleremote", blocking=False)  # connect ti linux lircd
 
 class update_intervall:
     wifi             = 1000
@@ -46,7 +48,7 @@ class update_intervall:
     tone_switch      = 1000
     disp_update      = 10
     source_switch    = 1000
-    play_pause       = 1000
+    play_pause       = 300
 
 class last_update:
     wifi             = 0
@@ -94,6 +96,43 @@ with open('config.sav') as data_file:
     tones = json.load(data_file)
 
 #-----------------------------------------------------------------#
+#             translate key code to string                        #
+#-----------------------------------------------------------------#
+def key_code_to_string(code):
+    if code == 103: return "KEY_UP"
+    if code == 108: return "KEY_DOWN"
+    if code == 105: return "KEY_LEFT"
+    if code == 106: return "KEY_RIGHT"
+    if code == 28:  return "KEY_ENTER"
+    if code == 139: return "KEY_MENU"
+    if code == 164: return "KEY_PLAYPAUSE"
+
+#-----------------------------------------------------------------#
+#                 background thred to get keycode                 #
+#-----------------------------------------------------------------#
+def keypressd(lirc_device):
+    global lirc_code
+    event_type  = ""
+    repeat_cout = 0
+    for event in lirc_device.read_loop():
+        if event.type == ecodes.EV_KEY:
+            #print(str(event))
+            string = str(event)
+            if "val 01" in string: event_type = "DOWN"
+            if "val 02" in string: event_type = "REPEAT"
+            if "val 00" in string: event_type = "UP"
+            if event_type == "DOWN":
+                lirc_code = key_code_to_string(event.code)
+            if event_type == "REPEAT":
+                repeat_cout = repeat_cout +1
+                if repeat_cout > 4:
+                    lirc_code = key_code_to_string(event.code)
+            if event_type == "UP":
+                if repeat_cout > 4:
+                    lirc_code = None
+                repeat_cout = 0
+
+#-----------------------------------------------------------------#
 #  is like arduino map function                                   #
 #  scales a value within a given range to another range           #
 #-----------------------------------------------------------------#
@@ -115,7 +154,7 @@ def get_wifi(timestamp):
         return
     if (timestamp - last_update.wifi > update_intervall.wifi):
         wifi_stat = iwlib.iwconfig.get_iwconfig("wlan0")
-        display.disp_content.wifi = str(wifi_stat['stats']['level'])
+        display.disp_content.wifi = wifi_stat['stats']['level']
         last_update.wifi = timestamp
 
 #-----------------------------------------------------------------#
@@ -239,18 +278,11 @@ def readIR(min_value, max_value, current_value, ir_value):
 #                       read lirc socket                          #
 #-----------------------------------------------------------------#
 def read_lirc():
+    global lirc_code
     result = ""
-    codeIR = []
-    global socket
-    try :
-        codeIR = lirc.nextcode()
-    except:
-        lirc.deinit()
-        time.sleep(5)
-        sockid=lirc.init("appleremote", blocking=False)  # connect ti linux lircd
-        codeIR = []
-    if codeIR != []:
-        result = codeIR[0]
+    if lirc_code != None:
+        result = lirc_code
+        lirc_code = None
     return result
 
 #-----------------------------------------------------------------#
@@ -304,7 +336,7 @@ def loop():
     switch_channel(ir_value)    # change radio channel
     tone_adjust(ir_value)       # call tone adjust
 
-    if ir_value == "KEY_OK":    # switch tone mode
+    if ir_value == "KEY_ENTER":    # switch tone mode
         switch_tone(True)
 
     if (now - last_update.time > update_intervall.time):       # update time in diaplay
@@ -342,6 +374,8 @@ def loop():
 update_tones()
 GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_tone, bouncetime=300)
+thread.start_new_thread(keypressd, (lirc_device, ))
+
 mpd.play(3)
 mpd.stop()
 mpd.play(0)

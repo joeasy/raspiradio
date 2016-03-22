@@ -141,11 +141,11 @@ def print_bar(value):
 
 # wifi signal display
 def show_wifi():
-    if disp_content.wifi > 66:
+    if disp_content.wifi > 80:
         screen.blit(wifi_icon_high,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.wifi > 33:
+    elif disp_content.wifi > 50:
         screen.blit(wifi_icon_medium,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.wifi <= 33:
+    elif disp_content.wifi <= 50:
         screen.blit(wifi_icon_low,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
     wifi_text = small_font.render(str(disp_content.wifi), True, black)
     screen.blit(wifi_text,(disp_positions.wifi_text_x,disp_positions.statusbar_pos))
@@ -154,11 +154,11 @@ def show_wifi():
 def show_vol():
     if disp_content.volume == 0:
         screen.blit(vol_icon_off,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume > 66:
+    elif disp_content.volume > 80:
         screen.blit(vol_icon_high,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume > 33:
+    elif disp_content.volume > 50:
         screen.blit(vol_icon_medium,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume <= 33:
+    elif disp_content.volume <= 50:
         screen.blit(vol_icon_low,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     print_bar(disp_content.tonevalue)
     current_tone_text = small_font.render(disp_content.tonemode, True, black)
@@ -175,7 +175,7 @@ def show_mpd():
         screen.blit(play_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         scroll_pos.name   = scroll_text(disp_content.name,medium_font,disp_positions.name_y,scroll_pos.name,1)
         scroll_pos.artist = scroll_text(disp_content.artist,medium_font,disp_positions.artist_y,scroll_pos.artist,1)
-        scroll_pos.title  = scroll_text(disp_content.title,bold_font,disp_positions.title_y,scroll_pos.title,1)
+        scroll_pos.title  = scroll_text(disp_content.title,bold_font,disp_positions.title_y,scroll_pos.title,2)
     else:
         screen.blit(pause_icon,(disp_positions.play_icon_x,disp_positions.statusbar_pos))
         screen.blit(radio_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
