@@ -16,9 +16,11 @@ import iwlib
 from evdev import InputDevice, categorize, ecodes, list_devices
 import thread
 from select import select
+from systemd.manager import Manager
 
 mpd.init()
 audio.init()
+manager = Manager()
 
 start_time = datetime.now() # remember time when script was started
 
@@ -47,7 +49,7 @@ class update_intervall:
     tone_update      = 50
     tone_switch      = 1000
     disp_update      = 10
-    source_switch    = 1000
+    app_mode         = 1000
     play_pause       = 300
 
 class last_update:
@@ -59,7 +61,7 @@ class last_update:
     time             = 0
     tone_switch      = 0
     disp_update      = 0
-    source_switch    = 0
+    app_mode         = 0
     play_pause       = 0
 
 # define the tone modes
@@ -74,26 +76,54 @@ tones        = [0,0,0,0,0]                     # bass, mid, treble, volume
 prev_tones   = [0,0,0,0,0]                            # the last values
 tone_strings = ["Vol", "Bass", "Mid", "Treb"] # Stings in the display fore tones
 
-num_sources     = 1 # number of input sources
+num_app_modes            = 1    # application modes
 num_tone_modes           = 3    # number of tone adjustment modes
 num_radio_channels       = 8    # number of radio channels
 
-class sources:
+class app_modes:
     IRadio = 0
-    Airpay = 1
+    Airplay = 1
 
-source_strings = ["RAD", "AIR"]
+app_mode_strings = ["RAD", "AIR"]
 
 class states:
     current_channel   = 0
     current_tone_mode = tone_mode.volume
-    current_source    = sources.IRadio
     mode_changed      = True
+    current_app_mode  = app_modes.IRadio
 
+#d efine services which should run in which app mode
+app_services = {
+    app_modes.IRadio:  ['mpd'],
+    app_modes.Airplay: ['shairport']}
 
 # restore saved values from disk
 with open('config.sav') as data_file:
     tones = json.load(data_file)
+
+#-----------------------------------------------------------------#
+#      turn on and off systemd unit acording to app mode          #
+#-----------------------------------------------------------------#
+def unit_control(current_app):
+    for group in app_services:
+        for cservice in  app_services[group]:
+            unit_name = cservice + ".service"
+            unit = manager.get_unit(unit_name)
+            current_state = unit.properties.ActiveState
+            if (current_app == group):
+                if current_state == 'inactive':
+                    print("starting " + cservice)
+                    try:
+                        unit.start('fail')
+                    except:
+                        print"unable to start " + cservice
+            else:
+                if current_state == 'active':
+                    print("stopping " + cservice)
+                    try:
+                        unit.stop('fail')
+                    except:
+                        print"unable to stop " + cservice
 
 #-----------------------------------------------------------------#
 #             translate key code to string                        #
@@ -178,12 +208,13 @@ def switch_channel(ir_value):
 #     switch input source                                         #
 #-----------------------------------------------------------------#
 def switch_source(timestamp):
-    if (timestamp - last_update.source_switch > update_intervall.source_switch):
-        states.current_source = states.current_source + 1
-        if states.current_source > num_sources:
-            states.current_source = 0
-        disp_content.source = source_strings[states.current_source]
-        last_update.source_switch = now
+    if (timestamp - last_update.app_mode > update_intervall.app_mode):
+        states.current_app_mode = states.current_app_mode + 1
+        if states.current_app_mode > num_app_modes:
+            states.current_app_mode = 0
+        display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
+        unit_control(states.current_app_mode)
+        last_update.app_mode = timestamp
 
 #-----------------------------------------------------------------#
 #     switch application mode - is triggert by push button        #
@@ -311,7 +342,7 @@ def ReadChannel(channel):
     data = int(data/3)
     return data
 
-def get_mpt_info(timestamp):
+def get_mpd_info(timestamp):
     if (timestamp - last_update.radio > update_intervall.radio):    # update radio data
         if mpd.stat() == "play":
             (name, artist, title) = mpd.info()
@@ -325,6 +356,15 @@ def get_mpt_info(timestamp):
             display.disp_content.artist   = ""
             display.disp_content.title    = ""
         last_update.radio                 = timestamp
+
+def radio_loop(now,ir_value):
+    switch_channel(ir_value)    # change radio channel
+    get_mpd_info(now)
+    if ir_value == "KEY_PLAYPAUSE":
+        play_pause(now)
+
+
+
 
 #-----------------------------------------------------------------#
 #           main programm loop                                    #
@@ -346,23 +386,21 @@ def loop():
     if (now - last_update.tone > update_intervall.tone ): # update tones
         update_tones()
         last_update.tone = now
+
     if (now - last_update.tone_adjust_idle > update_intervall.tone_adjust_idle ): # switch back to volume after timeout
         mode_changed = True
         last_update.tone_adjust_idle = now
         states.current_tone_mode = tone_mode.volume
 
-    get_mpt_info(now)
-
     if ir_value == "KEY_MENU":
         switch_source(now)
-
-    if ir_value == "KEY_PLAYPAUSE":
-        play_pause(now)
 
     display.disp_content.tonemode  = tone_strings[states.current_tone_mode]
     display.disp_content.tonevalue = tones[states.current_tone_mode]
 
     get_wifi(now)
+
+    if states.current_app_mode == app_modes.IRadio: radio_loop(now,ir_value)
 
     if (now - last_update.disp_update > update_intervall.disp_update):    # update display
         display.update_display(now)
@@ -375,11 +413,9 @@ update_tones()
 GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_tone, bouncetime=300)
 thread.start_new_thread(keypressd, (lirc_device, ))
+display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
+unit_control(states.current_app_mode)
 
-mpd.play(3)
-mpd.stop()
-mpd.play(0)
-audio.muteOff()
 while True:
     time.sleep(0.03)
     loop()

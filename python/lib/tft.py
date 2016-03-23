@@ -70,7 +70,7 @@ class disp_content:
     name          = ""
     artist        = ""
     title         = ""
-    source        = 0
+    app_mode      = 0
     source_string = 0
     wifi          = 0
     volume        = 0
@@ -108,8 +108,17 @@ def update_display(now):
     show_wifi()
     show_vol()
     show_time()
-    show_mpd()
+    if disp_content.app_mode == "RAD": update_radio_display()
+    if disp_content.app_mode == "AIR": update_airplay_display()
     pygame.display.update()
+
+# do special radio stuff
+def update_radio_display():
+    show_mpd()
+
+# do special airplay stuff
+def update_airplay_display():
+    screen.blit(airplay_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
 
 # scroll text if longer that display width
 def scroll_text(raw_text,font,y_pos,x_pos,speed):
