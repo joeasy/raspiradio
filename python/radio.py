@@ -2,43 +2,23 @@
 #!/usr/bin/env python
 
 import time
+from   lib import input_yamaha as controls
 from   lib import libmpdfunctions as mpd
 from   lib import libpt2322 as audio
 from   lib import tft as display
-import gaugette.rotary_encoder
-import RPi.GPIO as GPIO
-import spidev
 from   datetime import datetime
 from   random import randint
 import re
 import json
 import iwlib
-from evdev import InputDevice, categorize, ecodes, list_devices
-import thread
-from select import select
-from systemd.manager import Manager
+from   systemd.manager import Manager
 
+controls.init()
 mpd.init()
 audio.init()
 manager = Manager()
 
 start_time = datetime.now() # remember time when script was started
-
-A_PIN = 3                   # 1st pin of encoder
-B_PIN = 4                   # 2nd pin of encoder
-SWITCH_PIN = 7             # switch pin of encoder
-
-GPIO.setmode(GPIO.BOARD)    # RPi.GPIO Layout like pin Numbers on raspi
-
-#display.ini() # init the display
-
-lirc_device = InputDevice('/dev/input/event0')
-print(lirc_device)
-lirc_code = None
-
-# define rotary encoder and start background thread
-encoder = gaugette.rotary_encoder.RotaryEncoder.Worker(A_PIN, B_PIN)
-encoder.start()
 
 class update_intervall:
     wifi             = 1000
@@ -126,50 +106,6 @@ def unit_control(current_app):
                         print"unable to stop " + cservice
 
 #-----------------------------------------------------------------#
-#             translate key code to string                        #
-#-----------------------------------------------------------------#
-def key_code_to_string(code):
-    if code == 103: return "KEY_UP"
-    if code == 108: return "KEY_DOWN"
-    if code == 105: return "KEY_LEFT"
-    if code == 106: return "KEY_RIGHT"
-    if code == 28:  return "KEY_ENTER"
-    if code == 139: return "KEY_MENU"
-    if code == 164: return "KEY_PLAYPAUSE"
-
-#-----------------------------------------------------------------#
-#                 background thred to get keycode                 #
-#-----------------------------------------------------------------#
-def keypressd(lirc_device):
-    global lirc_code
-    event_type  = ""
-    repeat_cout = 0
-    for event in lirc_device.read_loop():
-        if event.type == ecodes.EV_KEY:
-            #print(str(event))
-            string = str(event)
-            if "val 01" in string: event_type = "DOWN"
-            if "val 02" in string: event_type = "REPEAT"
-            if "val 00" in string: event_type = "UP"
-            if event_type == "DOWN":
-                lirc_code = key_code_to_string(event.code)
-            if event_type == "REPEAT":
-                repeat_cout = repeat_cout +1
-                if repeat_cout > 4:
-                    lirc_code = key_code_to_string(event.code)
-            if event_type == "UP":
-                if repeat_cout > 4:
-                    lirc_code = None
-                repeat_cout = 0
-
-#-----------------------------------------------------------------#
-#  is like arduino map function                                   #
-#  scales a value within a given range to another range           #
-#-----------------------------------------------------------------#
-def amap(x, in_min, in_max, out_min, out_max):
-    return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
-
-#-----------------------------------------------------------------#
 # returns the elapsed milliseconds since the start of the program #
 #-----------------------------------------------------------------#
 def millis():
@@ -219,8 +155,8 @@ def switch_source(timestamp):
 #-----------------------------------------------------------------#
 #     switch application mode - is triggert by push button        #
 #-----------------------------------------------------------------#
-def switch_tone(message):
-    last_tone_adjusted = millis()
+def switch_tone(timestamp):
+    last_tone_adjusted = timestamp
     if (millis() - last_update.tone_switch > update_intervall.tone_switch):
         states.mode_changed = True
         states.current_tone_mode = states.current_tone_mode + 1
@@ -236,7 +172,6 @@ def play_pause(timestamp):
             mpd.stop()
         else:
             mpd.play(states.current_channel)
-
 
 #-----------------------------------------------------------------#
 #  update tones if they were changed and save the state to file   #
@@ -273,75 +208,21 @@ def update_tones():
 #-----------------------------------------------------------------#
 def tone_adjust(ir_value):
     global tones
-    value = readIR(0, 100, tones[states.current_tone_mode], ir_value)
+    value = controls.readIR(0, 100, tones[states.current_tone_mode], ir_value)
     #value = readEncoder(0, 100, tones[states.current_tone_mode])
     if (value != tones[states.current_tone_mode]):
         tones[states.current_tone_mode] = value
         if (states.current_tone_mode != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
-    value = readEncoder(0, 100, tones[states.current_tone_mode])
+    value = controls.readEncoder(0, 100, tones[states.current_tone_mode])
     if (value != tones[states.current_tone_mode]):
         tones[states.current_tone_mode] = value
         if (states.current_tone_mode != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
 
-    #value = readEncoder(0, 100, tones[states.current_tone_mode])
-
 #-----------------------------------------------------------------#
-#                       read encoder                              #
+#                get data from mpd                                #
 #-----------------------------------------------------------------#
-def readIR(min_value, max_value, current_value, ir_value):
-    delta = 0
-    new_value = current_value
-    if ir_value == "KEY_LEFT":
-        delta = -1
-    if ir_value == "KEY_RIGHT":
-        delta = 1
-    if (delta != 0):
-    	new_value = current_value + delta
-    	if (new_value > max_value):
-        	new_value = max_value
-    	if (new_value < min_value):
-        	new_value = min_value
-    return new_value
-
-#-----------------------------------------------------------------#
-#                       read lirc socket                          #
-#-----------------------------------------------------------------#
-def read_lirc():
-    global lirc_code
-    result = ""
-    if lirc_code != None:
-        result = lirc_code
-        lirc_code = None
-    return result
-
-#-----------------------------------------------------------------#
-#                       read encoder                              #
-#-----------------------------------------------------------------#
-def readEncoder(min_encoder_value, max_encoder_value, current_value):
-    delta = int(encoder.get_delta() / 4)
-    new_value = current_value
-    if (delta != 0):
-    	new_value = current_value + delta
-    	if (new_value > max_encoder_value):
-        	new_value = max_encoder_value
-    	if (new_value < min_encoder_value):
-        	new_value= min_encoder_value
-    return new_value
-
-#----------------------------------------------------------------#
-#    Function to read SPI data from MCP3008 chip                 #
-#    Channel must be an integer 0-7                              #
-#----------------------------------------------------------------#
-def ReadChannel(channel):
-    data = 0
-    for x in range(0, 3):
-        adc = spi.xfer2([1,(8+channel)<<4,0])
-        data = data + ((adc[1]&3) << 8) + adc[2]
-    data = int(data/3)
-    return data
-
 def get_mpd_info(timestamp):
     if (timestamp - last_update.radio > update_intervall.radio):    # update radio data
         if mpd.stat() == "play":
@@ -357,27 +238,26 @@ def get_mpd_info(timestamp):
             display.disp_content.title    = ""
         last_update.radio                 = timestamp
 
+#-----------------------------------------------------------------#
+#       do the special thing in radio mode                        #
+#-----------------------------------------------------------------#
 def radio_loop(now,ir_value):
     switch_channel(ir_value)    # change radio channel
     get_mpd_info(now)
     if ir_value == "KEY_PLAYPAUSE":
         play_pause(now)
 
-
-
-
 #-----------------------------------------------------------------#
 #           main programm loop                                    #
 #-----------------------------------------------------------------#
 def loop():
 
-    now = millis()              # get timestamp
-    ir_value = read_lirc()      # read IR
-    switch_channel(ir_value)    # change radio channel
-    tone_adjust(ir_value)       # call tone adjust
+    now = millis()                  # get timestamp
+    ir_value = controls.read_lirc() # read IR
+    tone_adjust(ir_value)           # call tone adjust
 
     if ir_value == "KEY_ENTER":    # switch tone mode
-        switch_tone(True)
+        switch_tone(now)
 
     if (now - last_update.time > update_intervall.time):       # update time in diaplay
         display.disp_content.time = time.strftime("%H:%M")
@@ -410,9 +290,6 @@ def loop():
 #              main program                                       #
 #-----------------------------------------------------------------#
 update_tones()
-GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_tone, bouncetime=300)
-thread.start_new_thread(keypressd, (lirc_device, ))
 display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
 unit_control(states.current_app_mode)
 
