@@ -72,7 +72,7 @@ class states:
     mode_changed      = True
     current_app_mode  = app_modes.IRadio
 
-#d efine services which should run in which app mode
+# define services which should run in which app mode
 app_services = {
     app_modes.IRadio:  ['mpd'],
     app_modes.Airplay: ['shairport']}
@@ -208,17 +208,17 @@ def update_tones():
 #-----------------------------------------------------------------#
 def tone_adjust(ir_value):
     global tones
-    value = controls.readIR(0, 100, tones[states.current_tone_mode], ir_value)
+    value = controls.readLeftRight(0, 100, tones[states.current_tone_mode], ir_value)
     #value = readEncoder(0, 100, tones[states.current_tone_mode])
     if (value != tones[states.current_tone_mode]):
         tones[states.current_tone_mode] = value
         if (states.current_tone_mode != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
-    value = controls.readEncoder(0, 100, tones[states.current_tone_mode])
-    if (value != tones[states.current_tone_mode]):
-        tones[states.current_tone_mode] = value
-        if (states.current_tone_mode != tone_mode.volume):
-            last_update.tone_adjust_idle = millis()
+    #value = controls.readEncoder(0, 100, tones[states.current_tone_mode])
+    #if (value != tones[states.current_tone_mode]):
+    #    tones[states.current_tone_mode] = value
+    #    if (states.current_tone_mode != tone_mode.volume):
+    #        last_update.tone_adjust_idle = millis()
 
 #-----------------------------------------------------------------#
 #                get data from mpd                                #
@@ -292,6 +292,9 @@ def loop():
 update_tones()
 display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
 unit_control(states.current_app_mode)
+mpd.play(1)
+time.sleep(1)
+mpd.stop()
 
 while True:
     time.sleep(0.03)

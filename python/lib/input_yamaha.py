@@ -30,9 +30,11 @@ encoder = None
 #-----------------------------------------------------------------#
 #             set key code to enter                               #
 #-----------------------------------------------------------------#
-def switch_tone_pressed():
+def switch_pressed(message):
+    print message
     global lirc_code
-    lirc_code = "KEY_ENTER"
+    if message == 7:
+        lirc_code = "KEY_ENTER"
 
 #-----------------------------------------------------------------#
 #             translate key code to string                        #
@@ -74,15 +76,17 @@ def keypressd(lirc_device):
 #-----------------------------------------------------------------#
 #                       read encoder                              #
 #-----------------------------------------------------------------#
-def readIR(min_value, max_value, current_value, ir_value):
+def readLeftRight(min_value, max_value, current_value, ir_value):
     delta = 0
+    enc_delta = 0
     new_value = current_value
     if ir_value == "KEY_LEFT":
-        delta = -1
+        delta = - 1
     if ir_value == "KEY_RIGHT":
-        delta = 1
-    if (delta != 0):
-    	new_value = current_value + delta
+        delta = + 1
+    enc_delta = int(encoder.get_delta() / 4)
+    if (delta != 0 or enc_delta !=0 ):
+    	new_value = current_value + delta + enc_delta
     	if (new_value > max_value):
         	new_value = max_value
     	if (new_value < min_value):
@@ -103,16 +107,16 @@ def read_lirc():
 #-----------------------------------------------------------------#
 #                       read encoder                              #
 #-----------------------------------------------------------------#
-def readEncoder(min_encoder_value, max_encoder_value, current_value):
-    delta = int(encoder.get_delta() / 4)
-    new_value = current_value
-    if (delta != 0):
-    	new_value = current_value + delta
-    	if (new_value > max_encoder_value):
-        	new_value = max_encoder_value
-    	if (new_value < min_encoder_value):
-        	new_value= min_encoder_value
-    return new_value
+#def readEncoder(min_encoder_value, max_encoder_value, current_value):
+#    delta = int(encoder.get_delta() / 4)
+#    new_value = current_value
+#    if (delta != 0):
+#    	new_value = current_value + delta
+#    	if (new_value > max_encoder_value):
+#        	new_value = max_encoder_value
+#    	if (new_value < min_encoder_value):
+#        	new_value= min_encoder_value
+#    return new_value
 
 #----------------------------------------------------------------#
 #    Function to read SPI data from MCP3008 chip                 #
@@ -137,5 +141,5 @@ def init():
     encoder = gaugette.rotary_encoder.RotaryEncoder.Worker(A_PIN, B_PIN)
     encoder.start()
     GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_tone_pressed, bouncetime=300)
+    GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_pressed, bouncetime=300)
     thread.start_new_thread(keypressd, (lirc_device, ))
