@@ -16,6 +16,9 @@ Installation Notes
 - apt-get install python-mpd
 - apt-get install python-pygame
 - apt-get install libiw-dev
+- apt-get install i2c-tools
+- apt-get install python-smbus
+- apt-get install libi2c-dev
 - pip install iwlib
 - #apt-get install libsystemd-dev
 - #git clone https://github.com/systemd/python-systemd
