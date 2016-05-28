@@ -13,6 +13,8 @@ Installation Notes
 - git clone https://github.com/guyc/py-gaugette
 - python setup.py install
 - pip install evdev
+- apt-get install mpd
+- apt-get install mpc
 - apt-get install python-mpd
 - apt-get install python-pygame
 - apt-get install libiw-dev
@@ -30,6 +32,7 @@ Installation Notes
 - modprobe fbtft_device name=adafruit22a rotate=270 speed=48000000 fps=50
 - /etc/modules-load.d/fbtft.conf
 - /etc/modprobe.d/fbtft.conf
+- /etc/modprobe.d/alsa-blacklist.conf
 - con2fbmap 1 1
 
 Useful links
