@@ -5,27 +5,24 @@ import RPi.GPIO as GPIO
 import spidev
 from   evdev import InputDevice, categorize, ecodes, list_devices
 import thread
+import time
 from   select import select
+from Adafruit_ADS1x15 import ADS1x15
 
 
 A_PIN      = 3             # 1st pin of encoder
 B_PIN      = 4             # 2nd pin of encoder
 SWITCH_PIN = 7             # switch pin of encoder
 
-GPIO.setmode(GPIO.BOARD)    # RPi.GPIO Layout like pin Numbers on raspi
+ADS1115 = 0x01	           # 16-bit ADC
+
+GPIO.setmode(GPIO.BOARD)   # RPi.GPIO Layout like pin Numbers on raspi
 
 lirc_code = None
 
-
-#lirc_device = InputDevice('/dev/input/event0')
-#print(lirc_device)
-#lirc_code = None
-
-# define rotary encoder and start background thread
-#encoder = gaugette.rotary_encoder.RotaryEncoder.Worker(A_PIN, B_PIN)
-#encoder.start()
-
 encoder = None
+
+adc = ADS1x15(ic=ADS1115)  # Ananlog Digital Converter for front panel input
 
 #-----------------------------------------------------------------#
 #             set key code to enter                               #
@@ -129,6 +126,14 @@ def ReadChannel(channel):
         data = data + ((adc[1]&3) << 8) + adc[2]
     data = int(data/3)
     return data
+
+#----------------------------------------------------------------#
+#    Function to read Yamaha front panel buttond with adc        #
+#----------------------------------------------------------------#
+def Read_Yamaha_Front_Panel_Buttons(channel):
+    # Select the gain and sample speed
+    gain = 4096  # +/- 4.096V
+    sps  = 860   # 860 samples per second
 
 #-----------------------------------------------------------------#
 #                      start some things                          #

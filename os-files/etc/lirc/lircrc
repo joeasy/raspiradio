@@ -1,0 +1,58 @@
+# ~/.lircrc
+#
+# button: Name der Taster (wie angelernt)
+# prog:   Ziel, wohin die Information übergeben werden soll (Socket oder Programm)
+# config: uebergebener String
+ 
+# Apple Remote
+# KEY_UP
+# KEY_DOWN
+# KEY_LEFT
+# KEY_RIGHT
+# KEY_OK
+# KEY_MENU
+# KEY_PLAYPAUSE
+ 
+begin
+    button = KEY_UP
+    prog = appleremote
+    config = KEY_UP
+end
+ 
+begin
+    button = KEY_DOWN
+    prog = appleremote
+    config = KEY_DOWN
+end
+ 
+begin
+    button = KEY_LEFT
+    prog = appleremote
+    config = KEY_LEFT
+    repeat = 2
+end
+ 
+begin
+    button = KEY_RIGHT
+    prog = appleremote
+    config = KEY_RIGHT
+    repeat = 2
+end
+ 
+begin
+    button = KEY_OK
+    prog = appleremote
+    config = KEY_OK
+end
+ 
+begin
+    button = KEY_MENU
+    prog = appleremote
+    config = KEY_MENU
+end
+ 
+begin
+    button = KEY_PLAYPAUSE
+    prog = appleremote
+    config = KEY_PLAYPAUSE
+end
