@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 #!/usr/bin/env python
 
 import time
