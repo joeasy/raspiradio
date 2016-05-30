@@ -35,6 +35,17 @@ Installation Notes
 - /etc/modprobe.d/alsa-blacklist.conf
 - con2fbmap 1 1
 
+- apt-get install libssl-dev libavahi-client-dev libasound2-dev avahi-daemon
+- git clone https://github.com/abrasive/shairport.git
+- cd shairport
+- ./configure
+- make
+- make install
+- cp scripts/debian/init.d/shairport /etc/init.d/
+- cp scripts/debian/default/shairport /etc/default/
+- systemctl enable shairport
+- systemctl start shairport
+
 Useful links
 - http://sainsmart.tumblr.com/post/52849596106/diagramsainsmart-18-tft-lcd-modules-connect
 - https://rhobobase.wordpress.com/2015/05/01/mini-screen/
