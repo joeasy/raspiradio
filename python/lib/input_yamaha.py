@@ -7,7 +7,7 @@ from   evdev import InputDevice, categorize, ecodes, list_devices
 import thread
 import time
 from   select import select
-from Adafruit_ADS1x15 import ADS1x15
+from   Adafruit_ADS1x15 import ADS1x15
 
 
 A_PIN      = 3             # 1st pin of encoder
@@ -18,7 +18,7 @@ ADS1115 = 0x01	           # 16-bit ADC
 
 GPIO.setmode(GPIO.BOARD)   # RPi.GPIO Layout like pin Numbers on raspi
 
-lirc_code = None
+key_code = None
 
 encoder = None
 
@@ -29,9 +29,9 @@ adc = ADS1x15(ic=ADS1115)  # Ananlog Digital Converter for front panel input
 #-----------------------------------------------------------------#
 def switch_pressed(message):
     print message
-    global lirc_code
+    global key_code
     if message == 7:
-        lirc_code = "KEY_ENTER"
+        key_code = "KEY_ENTER"
 
 #-----------------------------------------------------------------#
 #             translate key code to string                        #
@@ -49,7 +49,7 @@ def key_code_to_string(code):
 #                 background thred to get keycode                 #
 #-----------------------------------------------------------------#
 def keypressd(lirc_device):
-    global lirc_code
+    global key_code
     event_type  = ""
     repeat_cout = 0
     for event in lirc_device.read_loop():
@@ -60,14 +60,14 @@ def keypressd(lirc_device):
             if "val 02" in string: event_type = "REPEAT"
             if "val 00" in string: event_type = "UP"
             if event_type == "DOWN":
-                lirc_code = key_code_to_string(event.code)
+                key_code = key_code_to_string(event.code)
             if event_type == "REPEAT":
                 repeat_cout = repeat_cout +1
                 if repeat_cout > 4:
-                    lirc_code = key_code_to_string(event.code)
+                    key_code = key_code_to_string(event.code)
             if event_type == "UP":
                 if repeat_cout > 4:
-                    lirc_code = None
+                    key_code = None
                 repeat_cout = 0
 
 #-----------------------------------------------------------------#
@@ -93,12 +93,12 @@ def readLeftRight(min_value, max_value, current_value, ir_value):
 #-----------------------------------------------------------------#
 #                       read lirc socket                          #
 #-----------------------------------------------------------------#
-def read_lirc():
-    global lirc_code
+def read_key():
+    global key_code
     result = ""
-    if lirc_code != None:
-        result = lirc_code
-        lirc_code = None
+    if key_code != None:
+        result = key_code
+        key_code = None
     return result
 
 #-----------------------------------------------------------------#
@@ -134,6 +134,68 @@ def Read_Yamaha_Front_Panel_Buttons(channel):
     # Select the gain and sample speed
     gain = 4096  # +/- 4.096V
     sps  = 860   # 860 samples per second
+    button = ""
+    volts = adc.readADCSingleEnded(channel, gain, sps) / 1000
+    if channel == 0:
+        if volts > 2.9:
+            button = ""
+        elif volts < 0.2:
+            button = "KEY_RDS"
+        elif volts > 0.4 and volts < 0.8:
+            button = "KEY_MODE"
+        elif volts > 0.9 and volts < 1.2:
+            button = "KEY_START"
+        elif volts > 1.3 and volts < 1.6:
+            button = "KEY_EON"
+        elif volts > 1.8 and volts < 2.1:
+            button = "KEY_FM"
+    elif channel == 1:
+        if volts > 3:
+            button = ""
+        elif volts < 0.2:
+            button = "KEY_MEMORY"
+        elif volts > 0.4 and volts < 0.9:
+            button = "KEY_EDIT"
+        elif volts > 1.1 and volts < 1.6:
+            button = "KEY_ABC"
+        elif volts > 1.7 and volts < 2.1:
+            button = "KEY_1"
+        elif volts > 2.2 and volts < 2.6:
+            button = "KEY_2"
+    elif channel == 2:
+        if volts > 3:
+            button = ""
+        elif volts < 0.2:
+            button = "KEY_3"
+        elif volts > 0.4 and volts < 0.8:
+            button = "KEY_4"
+        elif volts > 0.9 and volts < 1.3:
+            button = "KEY_5"
+        elif volts > 1.4 and volts < 1.7:
+            button = "KEY_6"
+        elif volts > 1.9 and volts < 2.1:
+            button = "KEY_7"
+        elif volts > 2.2 and volts < 2.6:
+            button = "KEY_8"
+    return button
+
+#-----------------------------------------------------------------#
+#          background thred to get front panel keys               #
+#-----------------------------------------------------------------#
+def Read_Panel():
+    global key_code
+    panel_key = Read_Yamaha_Front_Panel_Buttons(0)
+    if panel_key != "":
+        key_code = panel_key
+        print "Panel: " + panel_key
+    panel_key = Read_Yamaha_Front_Panel_Buttons(1)
+    if panel_key != "":
+        key_code = panel_key
+        print "Panel: " + panel_key
+    panel_key = Read_Yamaha_Front_Panel_Buttons(2)
+    if panel_key != "":
+        key_code = panel_key
+        print "Panel: " + panel_key
 
 #-----------------------------------------------------------------#
 #                      start some things                          #
@@ -148,3 +210,4 @@ def init():
     GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_pressed, bouncetime=300)
     thread.start_new_thread(keypressd, (lirc_device, ))
+    thread.start_new_thread(Read_Panel, ())

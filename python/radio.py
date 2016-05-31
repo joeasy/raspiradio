@@ -125,14 +125,14 @@ def get_wifi(timestamp):
 #-----------------------------------------------------------------#
 #     switch radio channels                                       #
 #-----------------------------------------------------------------#
-def switch_channel(ir_value):
-    if ir_value == "KEY_UP":
+def switch_channel(key_value):
+    if key_value == "KEY_UP":
         if states.current_channel != num_radio_channels:
             states.current_channel = states.current_channel + 1
         else:
             states.current_channel = 0
         mpd.play(states.current_channel)
-    if ir_value == "KEY_DOWN":
+    if key_value == "KEY_DOWN":
         if states.current_channel != 0:
             states.current_channel = states.current_channel - 1
         else:
@@ -205,9 +205,9 @@ def update_tones():
 #-----------------------------------------------------------------#
 #     app mode to adjust volume meds and trebble                  #
 #-----------------------------------------------------------------#
-def tone_adjust(ir_value):
+def tone_adjust(key_value):
     global tones
-    value = controls.readLeftRight(0, 100, tones[states.current_tone_mode], ir_value)
+    value = controls.readLeftRight(0, 100, tones[states.current_tone_mode], key_value)
     #value = readEncoder(0, 100, tones[states.current_tone_mode])
     if (value != tones[states.current_tone_mode]):
         tones[states.current_tone_mode] = value
@@ -240,10 +240,10 @@ def get_mpd_info(timestamp):
 #-----------------------------------------------------------------#
 #       do the special thing in radio mode                        #
 #-----------------------------------------------------------------#
-def radio_loop(now,ir_value):
-    switch_channel(ir_value)    # change radio channel
+def radio_loop(now,key_value):
+    switch_channel(key_value)    # change radio channel
     get_mpd_info(now)
-    if ir_value == "KEY_PLAYPAUSE":
+    if key_value == "KEY_PLAYPAUSE":
         play_pause(now)
 
 #-----------------------------------------------------------------#
@@ -252,10 +252,10 @@ def radio_loop(now,ir_value):
 def loop():
 
     now = millis()                  # get timestamp
-    ir_value = controls.read_lirc() # read IR
-    tone_adjust(ir_value)           # call tone adjust
+    key_value = controls.read_key() # read IR
+    tone_adjust(key_value)           # call tone adjust
 
-    if ir_value == "KEY_ENTER":    # switch tone mode
+    if key_value == "KEY_ENTER":    # switch tone mode
         switch_tone(now)
 
     if (now - last_update.time > update_intervall.time):       # update time in diaplay
@@ -271,7 +271,7 @@ def loop():
         last_update.tone_adjust_idle = now
         states.current_tone_mode = tone_mode.volume
 
-    if ir_value == "KEY_MENU":
+    if key_value == "KEY_MENU":
         switch_source(now)
 
     display.disp_content.tonemode  = tone_strings[states.current_tone_mode]
@@ -279,7 +279,7 @@ def loop():
 
     get_wifi(now)
 
-    if states.current_app_mode == app_modes.IRadio: radio_loop(now,ir_value)
+    if states.current_app_mode == app_modes.IRadio: radio_loop(now,key_value)
 
     if (now - last_update.disp_update > update_intervall.disp_update):    # update display
         display.update_display(now)
