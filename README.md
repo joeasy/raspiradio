@@ -2,7 +2,7 @@
 raspberry pi radio with spi display and i2c audio chip
 project is still in very early phase and not usable
 
-Installation Notes
+# Installation Notes
 
 - apt-get install git
 - apt-get install lirc
@@ -46,7 +46,39 @@ Installation Notes
 - systemctl enable shairport
 - systemctl start shairport
 
-Useful links
+# Useful links
 - http://sainsmart.tumblr.com/post/52849596106/diagramsainsmart-18-tft-lcd-modules-connect
 - https://rhobobase.wordpress.com/2015/05/01/mini-screen/
 - https://github.com/notro/fbtft/wiki
+
+# GPIO Asignment
+
+| GPIO Number |  Usage              | Comment              |
+|-------------|---------------------|----------------------|
+|   2         | I2C SDA             |                      |
+|   3         | I2C SCL             |                      |
+|   4         | encoder switch      |    unused in Yamaha  |
+|   5         | unused              |                      |
+|   6         | unused              |                      |
+|   7         | SPI_CE1             |    free              |
+|   8         | SPI_CE0             |    Display           |
+|   9         | SPI_MISO            |    Display           |
+|   10        | SPI_MOSI            |    Display           |
+|   11        | SPI_CLK             |    Display           |
+|   12        | unused              |                      |
+|   13        | unused              |                      |
+|   14        | TXD                 |                      |
+|   15        | RXD                 |                      |
+|   16        | unused              |                      |
+|   17        | LIRC IR Reciver     |                      |
+|   18        | BCK I2S audio       |                      |
+|   19        | LRCK I2S audio      |                      |
+|   20        | DIN I2S audio       |                      |
+|   21        | DOUT I2S audio      |   unused             |
+|   22        | Encoder Pin 1       |                      |
+|   23        | Encoder Pin 2       |                      |
+|   24        | Display: DC         |                      |
+|   25        | Display: Reset      |                      |
+|   26        | unused              |                      |
+|   27        | Display: LED        |                      |
+
