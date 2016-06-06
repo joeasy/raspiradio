@@ -10,11 +10,9 @@ from   select import select
 from   Adafruit_ADS1x15 import ADS1x15
 
 
-A_PIN      = 3             # 1st pin of encoder
-B_PIN      = 4             # 2nd pin of encoder
+A_PIN      = 4             # 1st pin of encoder
+B_PIN      = 3             # 2nd pin of encoder
 SWITCH_PIN = 7             # switch pin of encoder
-
-ADS1115 = 0x01	           # 16-bit ADC
 
 GPIO.setmode(GPIO.BOARD)   # RPi.GPIO Layout like pin Numbers on raspi
 
@@ -22,7 +20,10 @@ key_code = None
 
 encoder = None
 
-adc = ADS1x15(ic=ADS1115)  # Ananlog Digital Converter for front panel input
+ADS1115 = 0x01              # 16-bit ADC
+gain = 4096                 # +/- 4.096V
+sps = 860                   # 860 samples per second
+adc = ADS1x15(ic=ADS1115)   # Ananlog Digital Converter for front panel input
 
 #-----------------------------------------------------------------#
 #             set key code to enter                               #
@@ -52,6 +53,7 @@ def keypressd(lirc_device):
     global key_code
     event_type  = ""
     repeat_cout = 0
+
     for event in lirc_device.read_loop():
         if event.type == ecodes.EV_KEY:
             #print(str(event))
@@ -81,12 +83,12 @@ def readLeftRight(min_value, max_value, current_value, ir_value):
         delta = - 1
     if ir_value == "KEY_RIGHT":
         delta = + 1
-    enc_delta = int(encoder.get_delta() / 4)
+    enc_delta = 2 * int(encoder.get_delta() / 2)
     if (delta != 0 or enc_delta !=0 ):
     	new_value = current_value + delta + enc_delta
     	if (new_value > max_value):
         	new_value = max_value
-    	if (new_value < min_value):
+    	if (new_value < min_value): 
         	new_value = min_value
     return new_value
 
@@ -131,9 +133,8 @@ def ReadChannel(channel):
 #    Function to read Yamaha front panel buttond with adc        #
 #----------------------------------------------------------------#
 def Read_Yamaha_Front_Panel_Buttons(channel):
-    # Select the gain and sample speed
-    gain = 4096  # +/- 4.096V
-    sps  = 860   # 860 samples per second
+    #print"klong"
+
     button = ""
     volts = adc.readADCSingleEnded(channel, gain, sps) / 1000
     if channel == 0:
@@ -183,19 +184,26 @@ def Read_Yamaha_Front_Panel_Buttons(channel):
 #          background thred to get front panel keys               #
 #-----------------------------------------------------------------#
 def Read_Panel():
-    global key_code
+    panel_key=None
     panel_key = Read_Yamaha_Front_Panel_Buttons(0)
     if panel_key != "":
-        key_code = panel_key
-        print "Panel: " + panel_key
+        time.sleep(0.01)
+        panel_key = Read_Yamaha_Front_Panel_Buttons(0)
+        if panel_key != "" :
+            return panel_key
     panel_key = Read_Yamaha_Front_Panel_Buttons(1)
     if panel_key != "":
-        key_code = panel_key
-        print "Panel: " + panel_key
+        time.sleep(0.01)
+        panel_key = Read_Yamaha_Front_Panel_Buttons(1)
+        if panel_key != "" :
+            return panel_key
     panel_key = Read_Yamaha_Front_Panel_Buttons(2)
     if panel_key != "":
-        key_code = panel_key
-        print "Panel: " + panel_key
+        time.sleep(0.01)
+        panel_key = Read_Yamaha_Front_Panel_Buttons(2)
+        if panel_key != "" :
+            return panel_key
+    return("")
 
 #-----------------------------------------------------------------#
 #                      start some things                          #
@@ -210,4 +218,4 @@ def init():
     GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.add_event_detect(SWITCH_PIN, GPIO.FALLING, callback=switch_pressed, bouncetime=300)
     thread.start_new_thread(keypressd, (lirc_device, ))
-    thread.start_new_thread(Read_Panel, ())
+    #thread.start_new_thread(Read_Panel, ("1", ))

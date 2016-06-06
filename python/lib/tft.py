@@ -40,11 +40,11 @@ red        = (255,0,0)
 # define fonts
 small_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/9.14))
 small_font_bold = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(size_y/9.14))
-medium_font     = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/7.11))
+medium_font     = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/7.8))
 large_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/5.33))
-bold_font       = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(size_y/7.11))
+bold_font       = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(size_y/7.8))
 icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/8))
-icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/2.28))
+icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/2.5))
 
 # render icons
 wifi_icon_high   = icon_font_small.render(u'\uf2e8',True,black)
@@ -84,18 +84,18 @@ class scroll_pos:
 
 # relative positions of objects on the screen
 class disp_positions:
-    statusbar_pos       = int(size_y/4.27)
+    statusbar_pos       = size_y//7.27
     wifi_icon_x         = int(size_x/1.3)
     wifi_text_x         = int(size_x/1.13)
     vol_icon_x          = int(size_x/40)
     time_text_x         = int(size_x/2.46)
     play_icon_x         = int(size_x/8)
-    name_y              = int(size_y/2.67)
-    artist_y            = int(size_y/1.94)
-    title_y             = int(size_y/1.52)
+    name_y              = int(size_y/4)
+    artist_y            = int(size_y/2.7)
+    title_y             = int(size_y/2.1)
     radio_icon_x        = int(size_x/2.91)
     tone_icon_x         = int(size_x/5)
-    big_icon_y          = int(size_y/2.84)
+    big_icon_y          = int(size_y/4)
     tone_text_x         = int(size_x/2.3)
     tone_text_y         = int(size_y/2.3)
     current_tone_text_x = int(size_x/5)
@@ -141,7 +141,7 @@ def scroll_text(raw_text,font,y_pos,x_pos,speed):
 def print_bar(value):
     bar_width = int(value * size_x/1.14/100)
     x_start   = int(size_x/16)
-    y_start   = int(size_y/1.16)
+    y_start   = int(size_y/1.5)
     x_width   = int(size_x/1.14)
     y_width   = int(size_y/12.8)
     pygame.draw.rect(screen, black, (x_start - 2, y_start - 2, x_width + 4, y_width + 4))

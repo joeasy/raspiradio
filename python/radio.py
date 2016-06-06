@@ -30,6 +30,7 @@ class update_intervall:
     disp_update      = 10
     app_mode         = 1000
     play_pause       = 300
+    panel_buttons    = 100
 
 class last_update:
     wifi             = 0
@@ -42,6 +43,7 @@ class last_update:
     disp_update      = 0
     app_mode         = 0
     play_pause       = 0
+    panel_buttons    = 0
 
 # define the tone modes
 class tone_mode:
@@ -252,7 +254,16 @@ def radio_loop(now,key_value):
 def loop():
 
     now = millis()                  # get timestamp
-    key_value = controls.read_key() # read IR
+    key_value = controls.read_key() # read controls
+    if (now - last_update.panel_buttons > update_intervall.panel_buttons):
+        button = controls.Read_Panel()
+        if button != "":
+            key_value = button
+            time.sleep(0.2)
+
+    if key_value != None and key_value != "":
+        print "Control Key: " + key_value
+            
     tone_adjust(key_value)           # call tone adjust
 
     if key_value == "KEY_ENTER":    # switch tone mode
@@ -284,6 +295,7 @@ def loop():
     if (now - last_update.disp_update > update_intervall.disp_update):    # update display
         display.update_display(now)
         last_update.disp_update = now
+
 
 #-----------------------------------------------------------------#
 #              main program                                       #
