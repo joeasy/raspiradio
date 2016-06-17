@@ -4,10 +4,10 @@ import smbus
 import time
 
 i2c = smbus.SMBus(1)
-i2c_address = 0x44
+i2c_address = 0x44          # i2c address for PT2322
 
-#tone_values = [(-14, 0x00), (-12, 0x01), (-10, 0x02), (-8, 0x03), (-6, 0x04), (-4, 0x05), (-2, 0x06),
-#                    (0, 0x07), (2, 0x0E), (4, 0x0D), (6, 0x0C), (8, 0x0B), (10, 0x0A), (12, 0x09), (14, 0x08)]
+i2c_pcf8574 = 0x20          # i2c address of IO chip
+io_port = 0b00000000        # binary number for pcf8574 i2c IO IC
 
 toneAttenuation =  [-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 toneValues      =  [0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15]
@@ -31,6 +31,10 @@ _3D_OFF                = 0x04
 TONE_DEFEAT            = 0x02
 function               = 0
 
+class inputs:
+    RASPI = 0
+    AUX   = 1
+
 def amap(x, in_min, in_max, out_min, out_max):
     result = (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
     #print result
@@ -39,14 +43,13 @@ def amap(x, in_min, in_max, out_min, out_max):
 
 # initialize PT2322
 def init():
-    print"klong"
     global function
-    time.sleep(0.5)  # in case this is first time - I2C bus not ready for this long on power on with 10uF cref
-    function = _3D_OFF        #mute OFF, 3D OFF, tone control ON
-    masterVolumeValue = 50     #master volume = -15db - temporary at 0
-    bassValue   = 0x07        #Bass   = -0dB
-    middleValue = 0x07        #Middle = -0dB
-    trebleValue = 0x07        #Treble = -0dB
+    time.sleep(0.5)          # in case this is first time - I2C bus not ready for this long on power on with 10uF cref
+    function = _3D_OFF       #mute OFF, 3D OFF, tone control ON
+    masterVolumeValue = 50   #master volume = -15db - temporary at 0
+    bassValue   = 0x07       #Bass   = -0dB
+    middleValue = 0x07       #Middle = -0dB
+    trebleValue = 0x07       #Treble = -0dB
 
     # initialize device
     writeI2CChar(SYSTEM_RESET)
@@ -73,6 +76,7 @@ def init():
     writeI2CChar(BASS_TONE_CONTROL | bassValue)
     writeI2CChar(MIDDLE_TONE_CONTROL | middleValue)
     writeI2CChar(TREBLE_TONE_CONTROL | trebleValue)
+    switch_input(inputs.RASPI)
 
 # tone table lookup
 def toneLookup(tone):
@@ -188,3 +192,10 @@ def treble(tt):
     tt = amap(tt,0,100,-14,14)
     ttv = toneLookup(tt)
     writeI2CChar(TREBLE_TONE_CONTROL | ttv)
+
+#switch the relais acording to the current app mode
+def switch_input(inp):
+    if inp == inputs.RASPI:
+        i2c.write_byte(i2c_pcf8574,0b00000000)
+    if inp == inputs.AUX:
+        i2c.write_byte(i2c_pcf8574,0b00000001)

@@ -17,8 +17,9 @@ mpd.init()
 audio.init()
 manager = Manager()
 
-start_time = datetime.now() # remember time when script was started
+start_time = datetime.now()     # remember time when script was started
 
+# how often (ms) sertain things are updated
 class update_intervall:
     wifi             = 1000
     radio            = 1000
@@ -32,6 +33,7 @@ class update_intervall:
     play_pause       = 300
     panel_buttons    = 100
 
+# timestamp when somthing was updated last
 class last_update:
     wifi             = 0
     radio            = 0
@@ -52,31 +54,42 @@ class tone_mode:
     mid    = 2
     treble = 3
     mute   = 4
+    inp    = 5
 
-tones        = [0,0,0,0,0]                     # bass, mid, treble, volume
-prev_tones   = [0,0,0,0,0]                            # the last values
+tones        = [0,0,0,0,0,0,0]                # bass, mid, treble, volume, mute, input, radio channel
+prev_tones   = [0,0,0,0,0,0,0]                # the last values
 tone_strings = ["Vol", "Bass", "Mid", "Treb"] # Stings in the display fore tones
 
-num_app_modes            = 1    # application modes
-num_tone_modes           = 3    # number of tone adjustment modes
-num_radio_channels       = 8    # number of radio channels
+num_app_modes      = 3   # application modes
+num_tone_modes     = 3   # number of tone adjustment modes
+num_radio_channels = 8   # number of radio channels
 
+# operation modes of software
 class app_modes:
-    IRadio = 0
+    IRadio  = 0
     Airplay = 1
+    Spotify = 2
+    AUX     = 3
 
-app_mode_strings = ["RAD", "AIR"]
+# which audio unput is active on which mode of the software
+app_mode_to_input = [0,0,0,1]
 
+
+app_mode_strings = ["RAD", "AIR", "SPOT", "AUX"]
+
+# states of some things
 class states:
     current_channel   = 0
     current_tone_mode = tone_mode.volume
     mode_changed      = True
     current_app_mode  = app_modes.IRadio
 
-# define services which should run in which app mode
+# define systemd services which should run in which app mode
 app_services = {
     app_modes.IRadio:  ['mpd'],
-    app_modes.Airplay: ['shairport']}
+    app_modes.Airplay: ['shairport'],
+    app_modes.Spotify: ['spotify-connect'],
+    app_modes.AUX: ['']}
 
 # restore saved values from disk
 with open('config.sav') as data_file:
@@ -88,23 +101,24 @@ with open('config.sav') as data_file:
 def unit_control(current_app):
     for group in app_services:
         for cservice in  app_services[group]:
-            unit_name = cservice + ".service"
-            unit = manager.get_unit(unit_name)
-            current_state = unit.properties.ActiveState
-            if (current_app == group):
-                if current_state == 'inactive':
-                    print("starting " + cservice)
-                    try:
-                        unit.start('fail')
-                    except:
-                        print"unable to start " + cservice
-            else:
-                if current_state == 'active':
-                    print("stopping " + cservice)
-                    try:
-                        unit.stop('fail')
-                    except:
-                        print"unable to stop " + cservice
+            if cservice != '':
+                unit_name = cservice + ".service"
+                unit = manager.get_unit(unit_name)
+                current_state = unit.properties.ActiveState
+                if (current_app == group):
+                    if current_state == 'inactive':
+                        print("starting " + cservice)
+                        try:
+                            unit.start('fail')
+                        except:
+                            print"unable to start " + cservice
+                else:
+                    if current_state == 'active':
+                        print("stopping " + cservice)
+                        try:
+                            unit.stop('fail')
+                        except:
+                            print"unable to stop " + cservice
 
 #-----------------------------------------------------------------#
 # returns the elapsed milliseconds since the start of the program #
@@ -114,7 +128,9 @@ def millis():
    ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
    return int(ms)
 
-# get current wifi signal level
+#-----------------------------------------------------------------#
+#               get current wifi signal level                     #
+#-----------------------------------------------------------------#
 def get_wifi(timestamp):
     if display.test_mode:
         display.disp_elements.wifi = randint(0,100)
@@ -125,7 +141,7 @@ def get_wifi(timestamp):
         last_update.wifi = timestamp
 
 #-----------------------------------------------------------------#
-#     switch radio channels                                       #
+#              switch radio channels                              #
 #-----------------------------------------------------------------#
 def switch_channel(key_value):
     if key_value == "KEY_UP":
@@ -134,15 +150,19 @@ def switch_channel(key_value):
         else:
             states.current_channel = 0
         mpd.play(states.current_channel)
-    if key_value == "KEY_DOWN":
+    elif key_value == "KEY_DOWN":
         if states.current_channel != 0:
             states.current_channel = states.current_channel - 1
         else:
             states.current_channel = num_radio_channels
         mpd.play(states.current_channel)
+    if re.search("KEY_[0-9]+", key_value):
+        regex = re.search("KEY_([0-9]+)", key_value)
+        states.current_channel = int(regex.group(1)) - 1
+        mpd.play(states.current_channel)
 
 #-----------------------------------------------------------------#
-#     switch input source                                         #
+#              switch input source                                #
 #-----------------------------------------------------------------#
 def switch_source(timestamp):
     if (timestamp - last_update.app_mode > update_intervall.app_mode):
@@ -151,6 +171,7 @@ def switch_source(timestamp):
             states.current_app_mode = 0
         display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
         unit_control(states.current_app_mode)
+        tones[tone_mode.inp] = app_mode_to_input[states.current_app_mode]
         last_update.app_mode = timestamp
 
 #-----------------------------------------------------------------#
@@ -163,9 +184,11 @@ def switch_tone(timestamp):
         states.current_tone_mode = states.current_tone_mode + 1
         if (states.current_tone_mode > num_tone_modes):
             states.current_tone_mode = 0
+        if (states.current_tone_mode != tone_mode.volume):
+            last_update.tone_adjust_idle = timestamp
 
 #-----------------------------------------------------------------#
-#     react on playpause key                                      #
+#              react on playpause key                             #
 #-----------------------------------------------------------------#
 def play_pause(timestamp):
     if (timestamp - last_update.play_pause > update_intervall.play_pause):
@@ -200,6 +223,10 @@ def update_tones():
         audio.treble(tones[tone_mode.treble])
         prev_tones[tone_mode.treble] = tones[tone_mode.treble]
         changed = True
+    if (tones[tone_mode.inp] != prev_tones[tone_mode.inp]):
+        audio.switch_input(tones[tone_mode.inp])
+        prev_tones[tone_mode.inp] = tones[tone_mode.inp]
+        changed = True
     if changed:
         with open('config.sav', 'w') as outfile:
             json.dump(tones, outfile)
@@ -215,11 +242,6 @@ def tone_adjust(key_value):
         tones[states.current_tone_mode] = value
         if (states.current_tone_mode != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
-    #value = controls.readEncoder(0, 100, tones[states.current_tone_mode])
-    #if (value != tones[states.current_tone_mode]):
-    #    tones[states.current_tone_mode] = value
-    #    if (states.current_tone_mode != tone_mode.volume):
-    #        last_update.tone_adjust_idle = millis()
 
 #-----------------------------------------------------------------#
 #                get data from mpd                                #
@@ -252,7 +274,6 @@ def radio_loop(now,key_value):
 #           main programm loop                                    #
 #-----------------------------------------------------------------#
 def loop():
-
     now = millis()                  # get timestamp
     key_value = controls.read_key() # read controls
     if (now - last_update.panel_buttons > update_intervall.panel_buttons):
@@ -263,7 +284,7 @@ def loop():
 
     if key_value != None and key_value != "":
         print "Control Key: " + key_value
-            
+
     tone_adjust(key_value)           # call tone adjust
 
     if key_value == "KEY_ENTER":    # switch tone mode
@@ -295,7 +316,6 @@ def loop():
     if (now - last_update.disp_update > update_intervall.disp_update):    # update display
         display.update_display(now)
         last_update.disp_update = now
-
 
 #-----------------------------------------------------------------#
 #              main program                                       #

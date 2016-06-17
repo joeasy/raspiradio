@@ -34,7 +34,7 @@ pygame.mouse.set_visible(False)
 white      = (255,255,255)
 black      = (0,0,0)
 light_gray = (200,200,200)
-dark_gray  = (150,150,150)
+dark_gray  = (100,100,100)
 red        = (255,0,0)
 
 # define fonts
@@ -44,7 +44,8 @@ medium_font     = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/7.8)
 large_font      = pygame.font.Font("fonts/NotoSans-Regular.ttf", int(size_y/5.33))
 bold_font       = pygame.font.Font("fonts/NotoSans-Bold.ttf", int(size_y/7.8))
 icon_font_small = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/8))
-icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/2.5))
+icon_font_large = pygame.font.Font("fonts/Material-Design-Iconic-Font.ttf", int(size_y/2.8))
+spot_font       = pygame.font.Font("fonts/socialicious.ttf", int(size_y/2.8))
 
 # render icons
 wifi_icon_high   = icon_font_small.render(u'\uf2e8',True,black)
@@ -58,6 +59,8 @@ play_icon        = icon_font_small.render(u'\uf3aa',True,black)
 pause_icon       = icon_font_small.render(u'\uf3a7',True,red)
 radio_icon       = icon_font_large.render(u'\uf2c2',True,black)
 airplay_icon     = icon_font_large.render(u'\uf3d2',True,black)
+spotify_icon     = spot_font.render(u'\u0051',True,black)
+aux_in_icon      = icon_font_large.render(u'\uf29f',True,black)
 bluetooth_icon   = icon_font_large.render(u'\uf282',True,black)
 tone_icon        = icon_font_large.render(u'\uf10f',True,black)
 
@@ -95,7 +98,7 @@ class disp_positions:
     title_y             = int(size_y/2.1)
     radio_icon_x        = int(size_x/2.91)
     tone_icon_x         = int(size_x/5)
-    big_icon_y          = int(size_y/4)
+    big_icon_y          = int(size_y/3.5)
     tone_text_x         = int(size_x/2.3)
     tone_text_y         = int(size_y/2.3)
     current_tone_text_x = int(size_x/5)
@@ -110,6 +113,8 @@ def update_display(now):
     show_time()
     if disp_content.app_mode == "RAD": update_radio_display()
     if disp_content.app_mode == "AIR": update_airplay_display()
+    if disp_content.app_mode == "SPOT": update_spotify_display()
+    if disp_content.app_mode == "AUX": update_aux_display()
     pygame.display.update()
 
 # do special radio stuff
@@ -119,6 +124,14 @@ def update_radio_display():
 # do special airplay stuff
 def update_airplay_display():
     screen.blit(airplay_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
+
+# do special spotify stuff
+def update_spotify_display():
+    screen.blit(spotify_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
+
+# do special aux stuff
+def update_aux_display():
+    screen.blit(aux_in_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
 
 # scroll text if longer that display width
 def scroll_text(raw_text,font,y_pos,x_pos,speed):

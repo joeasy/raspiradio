@@ -9,7 +9,6 @@ import time
 from   select import select
 from   Adafruit_ADS1x15 import ADS1x15
 
-
 A_PIN      = 4             # 1st pin of encoder
 B_PIN      = 3             # 2nd pin of encoder
 SWITCH_PIN = 7             # switch pin of encoder
@@ -88,7 +87,7 @@ def readLeftRight(min_value, max_value, current_value, ir_value):
     	new_value = current_value + delta + enc_delta
     	if (new_value > max_value):
         	new_value = max_value
-    	if (new_value < min_value): 
+    	if (new_value < min_value):
         	new_value = min_value
     return new_value
 
@@ -102,20 +101,6 @@ def read_key():
         result = key_code
         key_code = None
     return result
-
-#-----------------------------------------------------------------#
-#                       read encoder                              #
-#-----------------------------------------------------------------#
-#def readEncoder(min_encoder_value, max_encoder_value, current_value):
-#    delta = int(encoder.get_delta() / 4)
-#    new_value = current_value
-#    if (delta != 0):
-#    	new_value = current_value + delta
-#    	if (new_value > max_encoder_value):
-#        	new_value = max_encoder_value
-#    	if (new_value < min_encoder_value):
-#        	new_value= min_encoder_value
-#    return new_value
 
 #----------------------------------------------------------------#
 #    Function to read SPI data from MCP3008 chip                 #
@@ -141,43 +126,43 @@ def Read_Yamaha_Front_Panel_Buttons(channel):
         if volts > 2.9:
             button = ""
         elif volts < 0.2:
-            button = "KEY_RDS"
+            button = "KEY_MENU"              # RDS MODE/FREQ
         elif volts > 0.4 and volts < 0.8:
-            button = "KEY_MODE"
+            button = "KEY_DOWN"             # MODE
         elif volts > 0.9 and volts < 1.2:
-            button = "KEY_START"
+            button = "KEY_PLAYPAUSE"        # START
         elif volts > 1.3 and volts < 1.6:
-            button = "KEY_EON"
+            button = "KEY_UP"               # EON
         elif volts > 1.8 and volts < 2.1:
-            button = "KEY_FM"
+            button = "KEY_FM"               # FM/AM
     elif channel == 1:
         if volts > 3:
             button = ""
         elif volts < 0.2:
-            button = "KEY_MEMORY"
+            button = "KEY_EDIT"             # EDIT
         elif volts > 0.4 and volts < 0.9:
-            button = "KEY_EDIT"
+            button = "KEY_MEMORY"           # MEMORY
         elif volts > 1.1 and volts < 1.6:
-            button = "KEY_ABC"
+            button = "KEY_ENTER"            # A/B/C/D/E
         elif volts > 1.7 and volts < 2.1:
-            button = "KEY_1"
+            button = "KEY_1"                # 1
         elif volts > 2.2 and volts < 2.6:
-            button = "KEY_2"
+            button = "KEY_2"                # 2
     elif channel == 2:
         if volts > 3:
             button = ""
         elif volts < 0.2:
-            button = "KEY_3"
+            button = "KEY_3"                # 3
         elif volts > 0.4 and volts < 0.8:
-            button = "KEY_4"
+            button = "KEY_4"                # 4
         elif volts > 0.9 and volts < 1.3:
-            button = "KEY_5"
+            button = "KEY_5"                # 5
         elif volts > 1.4 and volts < 1.7:
-            button = "KEY_6"
+            button = "KEY_6"                # 6
         elif volts > 1.9 and volts < 2.1:
-            button = "KEY_7"
+            button = "KEY_7"                # 7
         elif volts > 2.2 and volts < 2.6:
-            button = "KEY_8"
+            button = "KEY_8"                # 8
     return button
 
 #-----------------------------------------------------------------#
