@@ -11,6 +11,7 @@ import re
 import json
 import iwlib
 from   systemd.manager import Manager
+import os.path
 
 controls.init()
 mpd.init()
@@ -53,14 +54,7 @@ class tone_mode:
     bass    = 1
     mid     = 2
     treble  = 3
-    mute    = 4
-    inp     = 5
-    channel = 6
-    play    = 7
-    mode    = 8
 
-tones        = [0,0,0,0,0,0,0,0,0]                # bass, mid, treble, volume, mute, input, radio channel
-prev_tones   = [0,0,0,0,0,0,0,0,0]                # the last values
 tone_strings = ["Vol", "Bass", "Mid", "Treb"] # Stings in the display fore tones
 
 num_app_modes      = 3   # application modes
@@ -74,18 +68,40 @@ class app_modes:
     Spotify = 2
     AUX     = 3
 
+tone_mode_to_string = ["volume", "bass", "mid", "treble"]
+
+app_states  = {
+                "volume"    : 0,
+                "bass"      : 0,
+                "mid"       : 0,
+                "treble"    : 0,
+                "mute"      : 0,
+                "input"     : 0,
+                "channel"   : 0,
+                "play"      : 0,
+                "app_mode"  : 0,
+                "tone_mode" : 0,
+                "changed"   : True
+              }
+
+prev_app_states  = {
+                "volume"    : 0,
+                "bass"      : 0,
+                "mid"       : 0,
+                "treble"    : 0,
+                "mute"      : 0,
+                "input"     : 0,
+                "channel"   : 0,
+                "play"      : 0,
+                "app_mode"  : 0,
+                "tone_mode" : 0,
+                "changed"   : True
+              }
+
 # which audio unput is active on which mode of the software
 app_mode_to_input = [0,0,0,1]
 
-
 app_mode_strings = ["RAD", "AIR", "SPOT", "AUX"]
-
-# states of some things
-class states:
-    current_channel   = 0
-    current_tone_mode = tone_mode.volume
-    mode_changed      = True
-    current_app_mode  = app_modes.IRadio
 
 # define systemd services which should run in which app mode
 app_services = {
@@ -97,13 +113,25 @@ app_services = {
 #-----------------------------------------------------------------#
 #      restore settings from disk                                 #
 #-----------------------------------------------------------------#
-def restore_tones():
+def restore_tones_old():
     global tones
     with open('config.sav') as data_file:
         tones = json.load(data_file)
     states.current_channel  = tones[tone_mode.channel]
     states.current_app_mode = tones[tone_mode.mode]
     audio.switch_input(tones[tone_mode.inp])
+
+#-----------------------------------------------------------------#
+#      restore settings from disk                                 #
+#-----------------------------------------------------------------#
+def restore_tones():
+    global app_states
+    global prev_app_states
+    if os.path.exists('appstates.sav'):
+        print("restoring states")
+        with open('appstates.sav') as data_file:
+            app_states = json.load(data_file)
+    audio.switch_input(app_states["input"])
 
 #-----------------------------------------------------------------#
 #      turn on and off systemd unit acording to app mode          #
@@ -142,9 +170,6 @@ def millis():
 #               get current wifi signal level                     #
 #-----------------------------------------------------------------#
 def get_wifi(timestamp):
-    if display.test_mode:
-        display.disp_elements.wifi = randint(0,100)
-        return
     if (timestamp - last_update.wifi > update_intervall.wifi):
         wifi_stat = iwlib.iwconfig.get_iwconfig("wlan0")
         display.disp_content.wifi = wifi_stat['stats']['quality']
@@ -156,37 +181,35 @@ def get_wifi(timestamp):
 def switch_channel(key_value):
     changed = False
     if key_value == "KEY_UP":
-        if states.current_channel != num_radio_channels:
-            states.current_channel = states.current_channel + 1
+        if app_states["channel"] != num_radio_channels:
+            app_states["channel"] = app_states["channel"] + 1
         else:
-            states.current_channel = 0
+            app_states["channel"] = 0
         changed = True
     elif key_value == "KEY_DOWN":
-        if states.current_channel != 0:
-            states.current_channel = states.current_channel - 1
+        if app_states["channel"] != 0:
+            app_states["channel"] = app_states["channel"] - 1
         else:
-            states.current_channel = num_radio_channels
+            app_states["channel"] = num_radio_channels
         changed = True
     if re.search("KEY_[0-9]+", key_value):
         regex = re.search("KEY_([0-9]+)", key_value)
-        states.current_channel = int(regex.group(1)) - 1
+        app_states["channel"] = int(regex.group(1)) - 1
         changed = True
     if changed:
-        tones[tone_mode.channel] = states.current_channel
-        mpd.play(states.current_channel)
+        mpd.play(app_states["channel"])
 
 #-----------------------------------------------------------------#
 #              switch input source                                #
 #-----------------------------------------------------------------#
 def switch_source(timestamp):
     if (timestamp - last_update.app_mode > update_intervall.app_mode):
-        states.current_app_mode = states.current_app_mode + 1
-        if states.current_app_mode > num_app_modes:
-            states.current_app_mode = 0
-        display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
-        unit_control(states.current_app_mode)
-        tones[tone_mode.inp]  = app_mode_to_input[states.current_app_mode]
-        tones[tone_mode.mode] = states.current_app_mode
+        app_states["app_mode"] = app_states["app_mode"] + 1
+        if app_states["app_mode"] > num_app_modes:
+            app_states["app_mode"] = 0
+        display.disp_content.app_mode = app_mode_strings[app_states["app_mode"]]
+        unit_control(app_states["app_mode"])
+        app_states["input"]  = app_mode_to_input[app_states["app_mode"]]
         last_update.app_mode  = timestamp
 
 #-----------------------------------------------------------------#
@@ -194,12 +217,12 @@ def switch_source(timestamp):
 #-----------------------------------------------------------------#
 def switch_tone(timestamp):
     last_tone_adjusted = timestamp
-    if (millis() - last_update.tone_switch > update_intervall.tone_switch):
-        states.mode_changed = True
-        states.current_tone_mode = states.current_tone_mode + 1
-        if (states.current_tone_mode > num_tone_modes):
-            states.current_tone_mode = 0
-        if (states.current_tone_mode != tone_mode.volume):
+    if (timestamp - last_update.tone_switch > update_intervall.tone_switch):
+        app_states["changed"] = True
+        app_states["tone_mode"] = app_states["tone_mode"] + 1
+        if (app_states["tone_mode"] > num_tone_modes):
+            app_states["tone_mode"] = 0
+        if (app_states["tone_mode"] != tone_mode.volume):
             last_update.tone_adjust_idle = timestamp
 
 #-----------------------------------------------------------------#
@@ -207,69 +230,68 @@ def switch_tone(timestamp):
 #-----------------------------------------------------------------#
 def play_pause(timestamp):
     if (timestamp - last_update.play_pause > update_intervall.play_pause):
-        if tones[tone_mode.play] == 1:
-            tones[tone_mode.play] = 0
+        if app_states["play"] == 1:
+            app_states["play"] = 0
         else:
-            tones[tone_mode.play] = 1
+            app_states["play"] = 1
 
 #-----------------------------------------------------------------#
 #  update tones if they were changed and save the state to file   #
 #-----------------------------------------------------------------#
 def update_tones():
     changed = False
-    if (tones[tone_mode.volume] !=prev_tones[tone_mode.volume]):
-        audio.masterVolume(tones[tone_mode.volume])
-        prev_tones[tone_mode.volume] = tones[tone_mode.volume]
-        display.disp_content.volume = tones[tone_mode.volume]
-        if tones[tone_mode.volume] == 0:
+    if (app_states["volume"] !=prev_app_states["volume"]):
+        audio.masterVolume(app_states["volume"])
+        prev_app_states["volume"] = app_states["volume"]
+        display.disp_content.volume = app_states["volume"]
+        if app_states["volume"] == 0:
             audio.muteOn()
         else:
             audio.muteOff()
-        changed = True
-    elif (tones[tone_mode.bass] !=prev_tones[tone_mode.bass]):
-        audio.bass(tones[tone_mode.bass])
-        prev_tones[tone_mode.bass] = tones[tone_mode.bass]
-        changed = True
-    elif (tones[tone_mode.mid] !=prev_tones[tone_mode.mid]):
-        audio.middle(tones[tone_mode.mid])
-        prev_tones[tone_mode.mid] = tones[tone_mode.mid]
-        changed = True
-    elif (tones[tone_mode.treble] !=prev_tones[tone_mode.treble]):
-        audio.treble(tones[tone_mode.treble])
-        prev_tones[tone_mode.treble] = tones[tone_mode.treble]
-        changed = True
-    if (tones[tone_mode.inp] != prev_tones[tone_mode.inp]):
-        audio.switch_input(tones[tone_mode.inp])
-        prev_tones[tone_mode.inp] = tones[tone_mode.inp]
-        changed = True
-    if (tones[tone_mode.mode] != prev_tones[tone_mode.mode]):
-        prev_tones[tone_mode.mode] = tones[tone_mode.mode]
-        changed = True
-    if (tones[tone_mode.channel] != prev_tones[tone_mode.channel]):
-        mpd.play(tones[tone_mode.channel])
-        prev_tones[tone_mode.channel] = tones[tone_mode.channel]
-        changed = True
-    if (tones[tone_mode.play] != prev_tones[tone_mode.play]):
-        if tones[tone_mode.play] == 0:
+        app_states["changed"] = True
+    if (app_states["bass"] !=prev_app_states["bass"]):
+        audio.bass(app_states["bass"])
+        prev_app_states["bass"] = app_states["bass"]
+        app_states["changed"] = True
+    if (app_states["mid"] !=prev_app_states["mid"]):
+        audio.middle(app_states["mid"])
+        prev_app_states["mid"] = app_states["mid"]
+        app_states["changed"] = True
+    if (app_states["treble"] !=prev_app_states["treble"]):
+        audio.treble(app_states["treble"])
+        prev_app_states["treble"] = app_states["treble"]
+        app_states["changed"] = True
+    if (app_states["input"] != prev_app_states["input"]):
+        audio.switch_input(app_states["input"])
+        prev_app_states["input"] = app_states["input"]
+        app_states["changed"] = True
+    if (app_states["tone_mode"] != prev_app_states["tone_mode"]):
+        prev_app_states["tone_mode"] = app_states["tone_mode"]
+        app_states["changed"] = True
+    if (app_states["channel"] != prev_app_states["channel"]):
+        mpd.play(app_states["channel"])
+        prev_app_states["channel"] = app_states["channel"]
+        app_states["changed"] = True
+    if (app_states["play"] != prev_app_states["play"]):
+        if app_states["play"] == 0:
             mpd.stop()
         else:
-            mpd.play(tones[tone_mode.channel])
-        prev_tones[tone_mode.play] = tones[tone_mode.play]
-        changed = True
-    if changed:
-        with open('config.sav', 'w') as outfile:
-            json.dump(tones, outfile)
+            mpd.play(app_states["channel"])
+        prev_app_states["play"] = app_states["play"]
+        app_states["changed"] = True
+    if app_states["changed"]:
+        with open('appstates.sav', 'w') as outfile:
+            json.dump(app_states, outfile)
 
 #-----------------------------------------------------------------#
 #     app mode to adjust volume meds and trebble                  #
 #-----------------------------------------------------------------#
 def tone_adjust(key_value):
     global tones
-    value = controls.readLeftRight(0, 100, tones[states.current_tone_mode], key_value)
-    #value = readEncoder(0, 100, tones[states.current_tone_mode])
-    if (value != tones[states.current_tone_mode]):
-        tones[states.current_tone_mode] = value
-        if (states.current_tone_mode != tone_mode.volume):
+    value = controls.readLeftRight(0, 100, app_states[tone_mode_to_string[app_states["tone_mode"]]], key_value)
+    if value != app_states[tone_mode_to_string[app_states["tone_mode"]]]:
+        app_states[tone_mode_to_string[app_states["tone_mode"]]] = value
+        if (app_states["tone_mode"] != tone_mode.volume):
             last_update.tone_adjust_idle = millis()
 
 #-----------------------------------------------------------------#
@@ -296,8 +318,8 @@ def get_mpd_info(timestamp):
 def radio_loop(now,key_value):
     switch_channel(key_value)    # change radio channel
     get_mpd_info(now)
-    if (tones[tone_mode.play] == 1 and mpd.stat() != "play"):
-        mpd.play(tones[tone_mode.channel])
+    if (app_states["play"] == 1 and mpd.stat() != "play"):
+        mpd.play(app_states["channel"])
     if key_value == "KEY_PLAYPAUSE":
         play_pause(now)
 
@@ -332,17 +354,21 @@ def loop():
     if (now - last_update.tone_adjust_idle > update_intervall.tone_adjust_idle ): # switch back to volume after timeout
         mode_changed = True
         last_update.tone_adjust_idle = now
-        states.current_tone_mode = tone_mode.volume
+        app_states["tone_mode"] = tone_mode.volume
 
     if key_value == "KEY_MENU":
         switch_source(now)
 
-    display.disp_content.tonemode  = tone_strings[states.current_tone_mode]
-    display.disp_content.tonevalue = tones[states.current_tone_mode]
+    display.disp_content.tonemode  = tone_strings[app_states["tone_mode"]]
+    display.disp_content.tonevalue = app_states[tone_mode_to_string[app_states["tone_mode"]]]
 
     get_wifi(now)
 
-    if states.current_app_mode == app_modes.IRadio: radio_loop(now,key_value)
+    if app_states["app_mode"] == app_modes.IRadio:
+        radio_loop(now,key_value)
+    else:
+        if mpd.stat() == "play":
+            mpd.stop()
 
     if (now - last_update.disp_update > update_intervall.disp_update):    # update display
         display.update_display(now)
@@ -354,12 +380,12 @@ def loop():
 #time.sleep(1)
 restore_tones()
 update_tones()
-display.disp_content.app_mode = app_mode_strings[states.current_app_mode]
-unit_control(states.current_app_mode)
-if tones[tone_mode.play] == 0 or tones[tone_mode.mode] != 0:
+display.disp_content.app_mode = app_mode_strings[app_states["app_mode"]]
+unit_control(app_states["app_mode"])
+if app_states["play"] == 0:
     mpd.stop()
 else:
-    mpd.play(tones[tone_mode.channel])
+    mpd.play(app_states["channel"])
 
 while True:
     time.sleep(0.03)

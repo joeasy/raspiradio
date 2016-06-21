@@ -163,11 +163,11 @@ def print_bar(value):
 
 # wifi signal display
 def show_wifi():
-    if disp_content.wifi > 80:
+    if disp_content.wifi > 70:
         screen.blit(wifi_icon_high,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.wifi > 50:
+    elif disp_content.wifi > 30:
         screen.blit(wifi_icon_medium,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.wifi <= 50:
+    elif disp_content.wifi <= 30:
         screen.blit(wifi_icon_low,(disp_positions.wifi_icon_x,disp_positions.statusbar_pos))
     wifi_text = small_font.render(str(disp_content.wifi), True, black)
     screen.blit(wifi_text,(disp_positions.wifi_text_x,disp_positions.statusbar_pos))
@@ -176,11 +176,11 @@ def show_wifi():
 def show_vol():
     if disp_content.volume == 0:
         screen.blit(vol_icon_off,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume > 80:
+    elif disp_content.volume > 70:
         screen.blit(vol_icon_high,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume > 50:
+    elif disp_content.volume > 30:
         screen.blit(vol_icon_medium,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
-    elif disp_content.volume <= 50:
+    elif disp_content.volume <= 30:
         screen.blit(vol_icon_low,(disp_positions.vol_icon_x,disp_positions.statusbar_pos))
     print_bar(disp_content.tonevalue)
     current_tone_text = small_font.render(disp_content.tonemode, True, black)
