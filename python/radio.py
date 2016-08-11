@@ -17,7 +17,6 @@ controls.init()
 mpd.init()
 audio.init()
 manager = Manager()
-
 start_time = datetime.now()     # remember time when script was started
 
 # how often (ms) sertain things are updated
@@ -33,6 +32,7 @@ class update_intervall:
     app_mode         = 1000
     play_pause       = 300
     panel_buttons    = 100
+    states_save      = 10000
 
 # timestamp when somthing was updated last
 class last_update:
@@ -47,6 +47,7 @@ class last_update:
     app_mode         = 0
     play_pause       = 0
     panel_buttons    = 0
+    states_save      = 0
 
 # define the tone modes
 class tone_mode:
@@ -71,14 +72,14 @@ class app_modes:
 tone_mode_to_string = ["volume", "bass", "mid", "treble"]
 
 app_states  = {
-                "volume"    : 0,
-                "bass"      : 0,
-                "mid"       : 0,
-                "treble"    : 0,
+                "volume"    : 40,
+                "bass"      : 50,
+                "mid"       : 50,
+                "treble"    : 50,
                 "mute"      : 0,
                 "input"     : 0,
-                "channel"   : 0,
-                "play"      : 0,
+                "channel"   : 1,
+                "play"      : 1,
                 "app_mode"  : 0,
                 "tone_mode" : 0,
                 "changed"   : True
@@ -91,12 +92,15 @@ prev_app_states  = {
                 "treble"    : 0,
                 "mute"      : 0,
                 "input"     : 0,
-                "channel"   : 0,
-                "play"      : 0,
-                "app_mode"  : 0,
-                "tone_mode" : 0,
+                "channel"   : 100,
+                "play"      : 100,
+                "app_mode"  : 100,
+                "tone_mode" : 100,
                 "changed"   : True
               }
+
+# currently tuned station
+currently_tuned = 1000
 
 # which audio unput is active on which mode of the software
 app_mode_to_input = [0,0,0,1]
@@ -113,25 +117,23 @@ app_services = {
 #-----------------------------------------------------------------#
 #      restore settings from disk                                 #
 #-----------------------------------------------------------------#
-def restore_tones_old():
-    global tones
-    with open('config.sav') as data_file:
-        tones = json.load(data_file)
-    states.current_channel  = tones[tone_mode.channel]
-    states.current_app_mode = tones[tone_mode.mode]
-    audio.switch_input(tones[tone_mode.inp])
-
-#-----------------------------------------------------------------#
-#      restore settings from disk                                 #
-#-----------------------------------------------------------------#
 def restore_tones():
     global app_states
     global prev_app_states
     if os.path.exists('appstates.sav'):
         print("restoring states")
         with open('appstates.sav') as data_file:
-            app_states = json.load(data_file)
+            try:
+                app_states = json.load(data_file)
+            except:
+                print"unable to load json file"
     audio.switch_input(app_states["input"])
+    if app_states["play"] == 0:
+        mpd.stop()
+    else:
+        mpd.play(app_states["channel"])
+    prev_app_states["play"] = app_states["play"]
+    app_states["changed"] = True
 
 #-----------------------------------------------------------------#
 #      turn on and off systemd unit acording to app mode          #
@@ -172,7 +174,9 @@ def millis():
 def get_wifi(timestamp):
     if (timestamp - last_update.wifi > update_intervall.wifi):
         wifi_stat = iwlib.iwconfig.get_iwconfig("wlan0")
-        display.disp_content.wifi = wifi_stat['stats']['quality']
+        if 'stats' in wifi_stat:
+            if 'quality' in wifi_stat:
+                display.disp_content.wifi = wifi_stat['stats']['quality']
         last_update.wifi = timestamp
 
 #-----------------------------------------------------------------#
@@ -196,8 +200,12 @@ def switch_channel(key_value):
         regex = re.search("KEY_([0-9]+)", key_value)
         app_states["channel"] = int(regex.group(1)) - 1
         changed = True
-    if changed:
+    if changed == True:
+        app_states["play"] = 1
+        prev_app_states["play"] = 0
         mpd.play(app_states["channel"])
+        app_states["play"] == 1
+        prev_app_states["play"] == 0
 
 #-----------------------------------------------------------------#
 #              switch input source                                #
@@ -238,9 +246,9 @@ def play_pause(timestamp):
 #-----------------------------------------------------------------#
 #  update tones if they were changed and save the state to file   #
 #-----------------------------------------------------------------#
-def update_tones():
+def update_tones(timestamp):
     changed = False
-    if (app_states["volume"] !=prev_app_states["volume"]):
+    if (app_states["volume"] != prev_app_states["volume"]):
         audio.masterVolume(app_states["volume"])
         prev_app_states["volume"] = app_states["volume"]
         display.disp_content.volume = app_states["volume"]
@@ -249,15 +257,15 @@ def update_tones():
         else:
             audio.muteOff()
         app_states["changed"] = True
-    if (app_states["bass"] !=prev_app_states["bass"]):
+    if (app_states["bass"] != prev_app_states["bass"]):
         audio.bass(app_states["bass"])
         prev_app_states["bass"] = app_states["bass"]
         app_states["changed"] = True
-    if (app_states["mid"] !=prev_app_states["mid"]):
+    if (app_states["mid"] != prev_app_states["mid"]):
         audio.middle(app_states["mid"])
         prev_app_states["mid"] = app_states["mid"]
         app_states["changed"] = True
-    if (app_states["treble"] !=prev_app_states["treble"]):
+    if (app_states["treble"] != prev_app_states["treble"]):
         audio.treble(app_states["treble"])
         prev_app_states["treble"] = app_states["treble"]
         app_states["changed"] = True
@@ -269,19 +277,21 @@ def update_tones():
         prev_app_states["tone_mode"] = app_states["tone_mode"]
         app_states["changed"] = True
     if (app_states["channel"] != prev_app_states["channel"]):
-        mpd.play(app_states["channel"])
+        #mpd.play(app_states["channel"])
         prev_app_states["channel"] = app_states["channel"]
         app_states["changed"] = True
     if (app_states["play"] != prev_app_states["play"]):
-        if app_states["play"] == 0:
-            mpd.stop()
-        else:
-            mpd.play(app_states["channel"])
         prev_app_states["play"] = app_states["play"]
         app_states["changed"] = True
-    if app_states["changed"]:
-        with open('appstates.sav', 'w') as outfile:
-            json.dump(app_states, outfile)
+
+
+
+    if app_states["changed"] == True:
+        app_states["changed"] = False
+        if (timestamp - last_update.states_save > update_intervall.states_save):
+            with open('appstates.sav', 'w') as outfile:
+                json.dump(app_states, outfile)
+            last_update.states_save = timestamp
 
 #-----------------------------------------------------------------#
 #     app mode to adjust volume meds and trebble                  #
@@ -298,9 +308,11 @@ def tone_adjust(key_value):
 #                get data from mpd                                #
 #-----------------------------------------------------------------#
 def get_mpd_info(timestamp):
+    global currently_tuned
     if (timestamp - last_update.radio > update_intervall.radio):    # update radio data
         if mpd.stat() == "play":
-            (name, artist, title) = mpd.info()
+            (name, artist, title, pos) = mpd.info()
+            currently_tuned = pos
             display.disp_content.mpd_stat = "play"
             display.disp_content.name     = name
             display.disp_content.artist   = artist
@@ -316,10 +328,15 @@ def get_mpd_info(timestamp):
 #       do the special thing in radio mode                        #
 #-----------------------------------------------------------------#
 def radio_loop(now,key_value):
+    global currently_tuned
     switch_channel(key_value)    # change radio channel
     get_mpd_info(now)
-    if (app_states["play"] == 1 and mpd.stat() != "play"):
-        mpd.play(app_states["channel"])
+    if app_states["play"] == 1:
+        if mpd.stat() != "play" or currently_tuned != app_states["channel"]:
+            mpd.play(app_states["channel"])
+    else:
+        if mpd.stat() == "play":
+            mpd.stop()
     if key_value == "KEY_PLAYPAUSE":
         play_pause(now)
 
@@ -335,9 +352,6 @@ def loop():
             key_value = button
             time.sleep(0.2)
 
-    if key_value != None and key_value != "":
-        print "Control Key: " + key_value
-
     tone_adjust(key_value)           # call tone adjust
 
     if key_value == "KEY_ENTER":    # switch tone mode
@@ -348,7 +362,7 @@ def loop():
         last_update.time = now
 
     if (now - last_update.tone > update_intervall.tone ): # update tones
-        update_tones()
+        update_tones(now)
         last_update.tone = now
 
     if (now - last_update.tone_adjust_idle > update_intervall.tone_adjust_idle ): # switch back to volume after timeout
@@ -377,16 +391,10 @@ def loop():
 #-----------------------------------------------------------------#
 #              main program                                       #
 #-----------------------------------------------------------------#
-#time.sleep(1)
 restore_tones()
-update_tones()
+update_tones(0)
 display.disp_content.app_mode = app_mode_strings[app_states["app_mode"]]
 unit_control(app_states["app_mode"])
-if app_states["play"] == 0:
-    mpd.stop()
-else:
-    mpd.play(app_states["channel"])
-
 while True:
     time.sleep(0.03)
     loop()

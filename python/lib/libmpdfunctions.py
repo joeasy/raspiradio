@@ -31,6 +31,7 @@ def info():
     title  = ""
     artist = ""
     name   = ""
+    pos    = 0
     mpd_client.connect(mpd_host, mpd_port)
     info = mpd_client.currentsong()
     if 'name' in info.keys():
@@ -44,6 +45,8 @@ def info():
             title=parts[2]
         else:
             artist = info["title"]
+    if 'pos' in info.keys():
+        pos = int(info["pos"])
     artist=artist.replace(name, "")
     artist= artist[:diplay_columns]
     artist=artist.strip()
@@ -51,7 +54,7 @@ def info():
     title=title[:diplay_columns]
     title=title.strip()
     mpd_client.disconnect()
-    return(name, artist, title)
+    return(name, artist, title, pos)
 
 #---------------------------------------------------------------------#
 #      tune to a station                                              #
