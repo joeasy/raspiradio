@@ -21,7 +21,7 @@ start_time = datetime.now()     # remember time when script was started
 
 # how often (ms) sertain things are updated
 class update_intervall:
-    wifi             = 1000
+    wifi             = 5000
     radio            = 1000
     tone             = 50
     time             = 500
@@ -58,7 +58,7 @@ class tone_mode:
 
 tone_strings = ["Vol", "Bass", "Mid", "Treb"] # Stings in the display fore tones
 
-num_app_modes      = 3   # application modes
+num_app_modes      = 4   # application modes
 num_tone_modes     = 3   # number of tone adjustment modes
 num_radio_channels = 8   # number of radio channels
 
@@ -68,6 +68,7 @@ class app_modes:
     Airplay = 1
     Spotify = 2
     AUX     = 3
+    USB     = 4
 
 tone_mode_to_string = ["volume", "bass", "mid", "treble"]
 
@@ -102,17 +103,18 @@ prev_app_states  = {
 # currently tuned station
 currently_tuned = 1000
 
-# which audio unput is active on which mode of the software
-app_mode_to_input = [0,0,0,1]
+# which audio input is active on which mode of the software
+app_mode_to_input = [0,0,0,1,2]
 
-app_mode_strings = ["RAD", "AIR", "SPOT", "AUX"]
+app_mode_strings = ["RAD", "AIR", "SPOT", "AUX", "USB"]
 
 # define systemd services which should run in which app mode
 app_services = {
     app_modes.IRadio:  ['mpd'],
     app_modes.Airplay: ['shairport'],
     app_modes.Spotify: ['spotify-connect'],
-    app_modes.AUX: ['']}
+    app_modes.AUX: [''],
+    app_modes.USB: ['']}
 
 #-----------------------------------------------------------------#
 #      restore settings from disk                                 #
@@ -175,7 +177,7 @@ def get_wifi(timestamp):
     if (timestamp - last_update.wifi > update_intervall.wifi):
         wifi_stat = iwlib.iwconfig.get_iwconfig("wlan0")
         if 'stats' in wifi_stat:
-            if 'quality' in wifi_stat:
+            if 'quality' in wifi_stat['stats']:
                 display.disp_content.wifi = wifi_stat['stats']['quality']
         last_update.wifi = timestamp
 
@@ -277,15 +279,11 @@ def update_tones(timestamp):
         prev_app_states["tone_mode"] = app_states["tone_mode"]
         app_states["changed"] = True
     if (app_states["channel"] != prev_app_states["channel"]):
-        #mpd.play(app_states["channel"])
         prev_app_states["channel"] = app_states["channel"]
         app_states["changed"] = True
     if (app_states["play"] != prev_app_states["play"]):
         prev_app_states["play"] = app_states["play"]
         app_states["changed"] = True
-
-
-
     if app_states["changed"] == True:
         app_states["changed"] = False
         if (timestamp - last_update.states_save > update_intervall.states_save):

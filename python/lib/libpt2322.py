@@ -34,6 +34,7 @@ function               = 0
 class inputs:
     RASPI = 0
     AUX   = 1
+    USB   = 2
 
 def amap(x, in_min, in_max, out_min, out_max):
     result = (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
@@ -199,3 +200,5 @@ def switch_input(inp):
         i2c.write_byte(i2c_pcf8574,0b00000000)
     if inp == inputs.AUX:
         i2c.write_byte(i2c_pcf8574,0b00000001)
+    if inp == inputs.USB:
+        i2c.write_byte(i2c_pcf8574,0b00000011)

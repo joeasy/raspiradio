@@ -61,6 +61,7 @@ radio_icon       = icon_font_large.render(u'\uf2c2',True,black)
 airplay_icon     = icon_font_large.render(u'\uf3d2',True,black)
 spotify_icon     = spot_font.render(u'\u0051',True,black)
 aux_in_icon      = icon_font_large.render(u'\uf29f',True,black)
+usb_in_icon      = icon_font_large.render(u'\uf2dd',True,black)
 bluetooth_icon   = icon_font_large.render(u'\uf282',True,black)
 tone_icon        = icon_font_large.render(u'\uf10f',True,black)
 
@@ -115,6 +116,7 @@ def update_display(now):
     if disp_content.app_mode == "AIR": update_airplay_display()
     if disp_content.app_mode == "SPOT": update_spotify_display()
     if disp_content.app_mode == "AUX": update_aux_display()
+    if disp_content.app_mode == "USB": update_usb_display()
     pygame.display.update()
 
 # do special radio stuff
@@ -132,6 +134,10 @@ def update_spotify_display():
 # do special aux stuff
 def update_aux_display():
     screen.blit(aux_in_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
+
+# do special usb stuff
+def update_usb_display():
+    screen.blit(usb_in_icon,(disp_positions.radio_icon_x,disp_positions.big_icon_y))
 
 # scroll text if longer that display width
 def scroll_text(raw_text,font,y_pos,x_pos,speed):
