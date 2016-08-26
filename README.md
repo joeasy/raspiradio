@@ -1,84 +1,26 @@
-# raspiradio
-raspberry pi radio with spi display and i2c audio chip
-project is still in very early phase and not usable
+## Raspiradio
+In the 90th listening to music was mostly CD. Then there were MP3's which you could by online and carry around on devices like an iPod. I still have a lot of CD's and still have many MP3's on my computer - but somehow I almost never use them. It is just so much more convinient to use streaming services like Spotify. Also a Smartphone is a way better user interface than a traditional remote control or even a PC based player software. You can sit on your sofa and listen to more or less everything you like.
 
-# Installation Notes
+The same thing is with radio. It used to be mostly FM radio with just a very limmited selection of stations which were mostly playing the same things over and over again. Now with internet radio stations you have access to more or less the whole world. But here I still like the way tradidional radios work. You turn it on and just listen. No need to open an app or so.
 
-- apt-get install git
-- apt-get install lirc
-- apt-get install python-pip
-- apt-get install python-setuptools python-dev
-- pip install WiringPi2
-- pip install spidev
-- git clone https://github.com/guyc/py-gaugette
-- python setup.py install
-- pip install evdev
-- apt-get install mpd
-- apt-get install mpc
-- apt-get install python-mpd
-- apt-get install python-pygame
-- apt-get install libiw-dev
-- apt-get install i2c-tools
-- apt-get install python-smbus
-- apt-get install libi2c-dev
-- pip install iwlib
-- #apt-get install libsystemd-dev
-- #git clone https://github.com/systemd/python-systemd
-- #python setup.py install
-- apt-get install python-dbus
-- git clone https://github.com/abn/python-systemd-dbus
-- python setup.py install
+With all the new benefints of the new technology there are still some things I still like from "the good old days". I still like the idea of using a pair of well sounding speakers which are connected to a capable amplifier. Also the look of "traditional" HiFi components is still something I like. 
 
-- modprobe fbtft_device name=adafruit22a rotate=270 speed=48000000 fps=50
-- /etc/modules-load.d/fbtft.conf
-- /etc/modprobe.d/fbtft.conf
-- /etc/modprobe.d/alsa-blacklist.conf
-- con2fbmap 1 1
+The things you can buy like Sonos speakers tend to be expansive and useless without a smart phone. Also there you have no choise which speakers you can connect to the system. There are also some devices in the classical HiFi design available - but they are also very expansive and often difficult to use.
 
-- apt-get install libssl-dev libavahi-client-dev libasound2-dev avahi-daemon
-- git clone https://github.com/abrasive/shairport.git
-- cd shairport
-- ./configure
-- make
-- make install
-- cp scripts/debian/init.d/shairport /etc/init.d/
-- cp scripts/debian/default/shairport /etc/default/
-- systemctl enable shairport
-- systemctl start shairport
+Basicaly what I wanted was:
+- Internet radio which works without smart phone
+- Status display
+- Airplay support
+- Spotify Connect
+- USB sound input to connect a PC
+- AUX input
+- Remote control 
+- 3 band EQ
+- Stereo power amplifier
+- WiFi network
+- Stand by power consumption <1W
+- 
 
-# Useful links
-- http://sainsmart.tumblr.com/post/52849596106/diagramsainsmart-18-tft-lcd-modules-connect
-- https://rhobobase.wordpress.com/2015/05/01/mini-screen/
-- https://github.com/notro/fbtft/wiki
+To get all this running A Raspberry Pi looked like the best choice. All the streaming services are available and it is the best documented single board computer. The GPIO's allow the connection to a lot of devices.
 
-# GPIO Asignment
-
-| GPIO Number |  Usage              | Comment              |
-|-------------|---------------------|----------------------|
-|   2         | I2C SDA             |                      |
-|   3         | I2C SCL             |                      |
-|   4         | encoder switch      |    unused in Yamaha  |
-|   5         | unused              |                      |
-|   6         | unused              |                      |
-|   7         | SPI_CE1             |    free              |
-|   8         | SPI_CE0             |    Display           |
-|   9         | SPI_MISO            |    Display           |
-|   10        | SPI_MOSI            |    Display           |
-|   11        | SPI_CLK             |    Display           |
-|   12        | unused              |                      |
-|   13        | unused              |                      |
-|   14        | TXD                 |                      |
-|   15        | RXD                 |                      |
-|   16        | unused              |                      |
-|   17        | LIRC IR Reciver     |                      |
-|   18        | BCK I2S audio       |                      |
-|   19        | LRCK I2S audio      |                      |
-|   20        | DIN I2S audio       |                      |
-|   21        | DOUT I2S audio      |   unused             |
-|   22        | Encoder Pin 1       |                      |
-|   23        | Encoder Pin 2       |                      |
-|   24        | Display: DC         |                      |
-|   25        | Display: Reset      |                      |
-|   26        | unused              |                      |
-|   27        | Display: LED        |                      |
-
+Please have a look at the Wiki for more details.
